@@ -2,6 +2,7 @@ use rand;
 use rand::distributions::{Normal, IndependentSample, Range};
 use std;
 
+use math::*;
 use problem::*;
 use result::*;
 use settings::*;
@@ -75,8 +76,9 @@ fn create_population(pop_size: u32, ind_size: u32) -> Vec<Individual> {
     (0..pop_size)
         .map(|_| {
             let mut res_ind = Individual::new();
-            let normal_rng = Normal::new(0.0, 1.0);
-            res_ind.genes = (0..ind_size).map(|_| normal_rng.ind_sample(&mut rng) as f32).collect::<Vec<f32>>();
+            // let normal_rng = Normal::new(0.0, 1.0);
+            // res_ind.genes = (0..ind_size).map(|_| normal_rng.ind_sample(&mut rng) as f32).collect::<Vec<f32>>();
+            res_ind.genes = rand_vector_stdgauss(ind_size as usize, &mut rng);
             res_ind
         })
         .collect::<Vec<Individual>>()
@@ -194,18 +196,3 @@ fn get_best_individual(popul: &Vec<Individual>) -> Individual {
     popul[idx].clone()
 }
 
-fn min(xs: &Vec<f32>) -> f32 {
-    xs.into_iter().fold(xs[0], |res, &x| if res < x {res} else {x})
-}
-
-fn max(xs: &Vec<f32>) -> f32 {
-    xs.into_iter().fold(xs[0], |res, &x| if res > x {res} else {x})
-}
-
-fn mean(xs: &Vec<f32>) -> f32 {
-    if xs.len() > 0 {
-        xs.into_iter().fold(0f32, |s, &x| s+x) / (xs.len() as f32)
-    } else {
-        std::f32::NAN
-    }
-}

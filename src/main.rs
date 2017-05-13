@@ -1,6 +1,8 @@
 extern crate rand;
 
 mod ga;
+mod math;
+mod neuro;
 mod problem;
 mod result;
 mod settings;
