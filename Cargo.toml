@@ -1,0 +1,7 @@
+[package]
+name = "revonet"
+version = "0.1.0"
+authors = ["yurytsoy <yurytsoy@gmail.com>"]
+
+[dependencies]
+rand = "*"
