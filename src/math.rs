@@ -1,4 +1,4 @@
-use rand;
+// use rand;
 use rand::{ThreadRng};
 use rand::distributions::{Normal, IndependentSample};
 use std;
@@ -33,17 +33,19 @@ pub fn mean(xs: &Vec<f32>) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use rand;
+
     use math::*;
 
     #[test]
-    fn test_mult_zero() {
+    fn test_dot_product_zeros() {
         let x1s = [1f32; 100];
         let zeros = [0f32; 100];
         assert!(dot_product(&x1s, &zeros) == 0f32);
     }
 
     #[test]
-    fn test_mult_units() {
+    fn test_dot_product_units() {
         const LEN: usize = 100;
         let x1s = [1f32; LEN];
         let x2s = [1f32; LEN];
@@ -51,15 +53,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mult_neg() {
-        const LEN: usize = 100;
-        let x1s = [-1f32; LEN];
-        let x2s = [1f32; LEN];
-        assert!(dot_product(&x1s, &x2s) == -(LEN as f32));
-    }
-
-    #[test]
-    fn test_mult_rand() {
+    fn test_dot_product_rand() {
         const LEN: usize = 100;
         let mut rng = rand::thread_rng();
         for _ in 0..1000 {
@@ -75,7 +69,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_unequal_lengths() {
+    fn test_dot_product_unequal_lengths() {
         let x1s = [1f32; 10];
         let x2s = [1f32; 100];
         assert!(dot_product(&x1s, &x2s) == 0f32);
