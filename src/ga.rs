@@ -78,7 +78,7 @@ fn create_population(pop_size: u32, ind_size: u32) -> Vec<Individual> {
             let mut res_ind = Individual::new();
             // let normal_rng = Normal::new(0.0, 1.0);
             // res_ind.genes = (0..ind_size).map(|_| normal_rng.ind_sample(&mut rng) as f32).collect::<Vec<f32>>();
-            res_ind.genes = rand_vector_stdgauss(ind_size as usize, &mut rng);
+            res_ind.genes = rand_vector_std_gauss(ind_size as usize, &mut rng);
             res_ind
         })
         .collect::<Vec<Individual>>()

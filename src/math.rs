@@ -4,14 +4,14 @@ use rand::distributions::{Normal, IndependentSample};
 use std;
 
 
-pub fn rand_vector_stdgauss(size: usize, rng: &mut ThreadRng) -> Vec<f32> {
+pub fn rand_vector_std_gauss(size: usize, rng: &mut ThreadRng) -> Vec<f32> {
     let normal_rng = Normal::new(0.0, 1.0);
     (0..size).map(|_| normal_rng.ind_sample(rng) as f32).collect::<Vec<f32>>()
 }
 
 #[allow(dead_code)]
-pub fn rand_matrix_stdgauss(height: usize, width: usize, rng: &mut ThreadRng) -> Vec<Vec<f32>> {
-    (0..height).map(|_| rand_vector_stdgauss(width, rng)).collect::<Vec<Vec<f32>>>()
+pub fn rand_matrix_std_gauss(height: usize, width: usize, rng: &mut ThreadRng) -> Vec<Vec<f32>> {
+    (0..height).map(|_| rand_vector_std_gauss(width, rng)).collect::<Vec<Vec<f32>>>()
 }
 
 pub fn dot(x1s: &[f32], x2s: &[f32]) -> f32 {
@@ -67,8 +67,8 @@ mod tests {
         const LEN: usize = 100;
         let mut rng = rand::thread_rng();
         for _ in 0..1000 {
-            let x1s = rand_vector_stdgauss(LEN, &mut rng);
-            let x2s = rand_vector_stdgauss(LEN, &mut rng);
+            let x1s = rand_vector_std_gauss(LEN, &mut rng);
+            let x2s = rand_vector_std_gauss(LEN, &mut rng);
             let mut sum = 0f32;
             for k in 0..LEN {
                 sum += x1s[k] * x2s[k];
@@ -99,11 +99,11 @@ mod tests {
         const LEN2: usize = 20;
         let mut rng = rand::thread_rng();
         for _ in 0..1000 {
-            let x1s = rand_matrix_stdgauss(LEN2, LEN1, &mut rng);
-            let x2s = rand_vector_stdgauss(LEN1, &mut rng);
+            let x1s = rand_matrix_std_gauss(LEN2, LEN1, &mut rng);
+            let x2s = rand_vector_std_gauss(LEN1, &mut rng);
             let dot_res = dot_mv(&x1s, &x2s);
             assert!(dot_res.len() == LEN2);
-            
+
             // println!("{:?}", dot_res);
             let mut res: Vec<f32> = Vec::with_capacity(LEN2);
             for k in 0..LEN2 {
