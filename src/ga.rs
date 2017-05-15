@@ -1,4 +1,5 @@
 use rand;
+use rand::{Rng, SeedableRng, StdRng};
 use rand::distributions::{Normal, IndependentSample, Range};
 use std;
 
@@ -12,14 +13,18 @@ pub struct GA<'a> {
     population: Vec<Individual>,
     problem: &'a OptProblem,
     result: Option<GAResult>,
+    rng: StdRng,
 }
 
 impl<'a> GA<'a> {
     pub fn new(settings: GASettings, problem: &'a OptProblem) -> GA {
+        let seed: &[_] = &[settings.rng_seed as usize];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
         let pop_size = settings.pop_size;
         let param_count = settings.param_count;
         GA{settings: settings,
-           population: create_population(pop_size, param_count),
+           population: create_population(pop_size, param_count, &mut rng),
+           rng: rng,
            problem: problem,
            result: None}
     }
@@ -35,11 +40,11 @@ impl<'a> GA<'a> {
             }
 
             // selection
-            let sel_inds = select(&fits, self.settings.tour_size);
+            let sel_inds = select(&fits, self.settings.tour_size, &mut self.rng);
 
             // crossover
             let mut children: Vec<Individual> = Vec::with_capacity(self.settings.pop_size as usize + 1);
-            cross(&self.population, &sel_inds, &mut children, self.settings.use_elite, self.settings.x_prob, self.settings.x_alpha);
+            cross(&self.population, &sel_inds, &mut children, self.settings.use_elite, self.settings.x_prob, self.settings.x_alpha, &mut self.rng);
 
             // mutation
             mutate(&mut children, self.settings.mut_prob);
@@ -71,13 +76,10 @@ impl Individual {
     }
 }
 
-fn create_population(pop_size: u32, ind_size: u32) -> Vec<Individual> {
-    let mut rng = rand::thread_rng();
+fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<Individual> {
     (0..pop_size)
         .map(|_| {
             let mut res_ind = Individual::new();
-            // let normal_rng = Normal::new(0.0, 1.0);
-            // res_ind.genes = (0..ind_size).map(|_| normal_rng.ind_sample(&mut rng) as f32).collect::<Vec<f32>>();
             res_ind.genes = rand_vector_std_gauss(ind_size as usize, &mut rng);
             res_ind
         })
@@ -108,10 +110,9 @@ fn evaluate(popul: &Vec<Individual>, problem: &OptProblem, cur_result: &mut GARe
     fits
 }
 
-fn select(fits: &Vec<f32>, tour_size: u32) -> Vec<usize> {
+fn select(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<usize> {
     let range = Range::new(0, fits.len());
     let mut sel_inds: Vec<usize> = Vec::with_capacity(fits.len());  // vector of indices of selected inds. +1 in case of elite individual is used.
-    let mut rng = rand::thread_rng();
     for _ in 0..fits.len() {
         let tour_inds = (0..tour_size).map(|_| range.ind_sample(&mut rng)).collect::<Vec<usize>>();
         let winner = tour_inds.iter().fold(tour_inds[0], |w_idx, &k|
@@ -123,24 +124,23 @@ fn select(fits: &Vec<f32>, tour_size: u32) -> Vec<usize> {
     sel_inds
 }
 
-fn cross(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut Vec<Individual>, use_elite: bool, x_prob: f32, x_alpha: f32) {
+fn cross<T: Rng>(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut Vec<Individual>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut T) {
     let range = Range::new(0, popul.len());
-    let mut rng = rand::thread_rng();
     if use_elite {
         children.push(get_best_individual(popul));
     }
     loop {
         // select parent individuals
-        let p1: usize = range.ind_sample(&mut rng);
-        let mut p2: usize = range.ind_sample(&mut rng);
+        let p1: usize = range.ind_sample(rng);
+        let mut p2: usize = range.ind_sample(rng);
         while p2 == p1 {
-            p2 = range.ind_sample(&mut rng);
+            p2 = range.ind_sample(rng);
         }
 
         if rand::random::<f32>() < x_prob {
             let mut c1 = Individual::new();
             let mut c2 = Individual::new();
-            cross_blx_alpha(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha);
+            cross_blx_alpha(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha, rng);
             children.push(c1);
             children.push(c2);
         } else {
@@ -152,14 +152,13 @@ fn cross(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut Vec<Indi
     }
 }
 
-fn cross_blx_alpha(p1: &Individual, p2: &Individual, c1: &mut Individual, c2: &mut Individual, alpha: f32) {
+fn cross_blx_alpha(p1: &Individual, p2: &Individual, c1: &mut Individual, c2: &mut Individual, alpha: f32, mut rng: &mut Rng) {
     assert!(p1.genes.len() == p2.genes.len());
 
     let gene_count = p1.genes.len();
     c1.genes = Vec::with_capacity(gene_count);
     c2.genes = Vec::with_capacity(gene_count);
 
-    let mut rng = rand::thread_rng();
     for k in 0..gene_count {
         let (min_gene, max_gene) = if p1.genes[k] > p2.genes[k] {(p2.genes[k], p1.genes[k])}
                                    else                         {(p1.genes[k], p2.genes[k])};

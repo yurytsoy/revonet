@@ -223,6 +223,12 @@ mod test {
         let mut net_linear: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
         net_linear.add_hidden_layer::<LinearActivation>(30 as usize).build(&mut rng);
 
+        let net_out = net_linear.compute(&[0f32; INPUT_SIZE]);
+        assert!(net_out.iter().all(|&x| x != 0f32));
+        let net_out = net_linear.compute(&rand_vector_std_gauss(INPUT_SIZE, &mut rng));
+        assert!(net_out.iter().all(|&x| x != 0f32));
+
+        // reset weights => output should be 0.
         let mut zero_w = Vec::new();
         zero_w.push(vec![0f32; INPUT_SIZE * 30]);
         zero_w.push(vec![0f32; OUTPUT_SIZE * 30]);
@@ -230,9 +236,9 @@ mod test {
         zero_b.push(vec![0f32; 30]);
         zero_b.push(vec![0f32; OUTPUT_SIZE]);
         net_linear.set_weights(&zero_w, &zero_b);
+
         let net_out = net_linear.compute(&[0f32; INPUT_SIZE]);
         assert!(net_out.iter().all(|&x| x == 0f32));
-
         let net_out = net_linear.compute(&rand_vector_std_gauss(INPUT_SIZE, &mut rng));
         assert!(net_out.iter().all(|&x| x == 0f32));
     }

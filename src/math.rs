@@ -1,16 +1,16 @@
 // use rand;
-use rand::{ThreadRng};
+use rand::{Rng};
 use rand::distributions::{Normal, IndependentSample};
 use std;
 
-
-pub fn rand_vector_std_gauss(size: usize, rng: &mut ThreadRng) -> Vec<f32> {
+/// The static type is needed according to advice here: https://users.rust-lang.org/t/dynamic-dispatch-and-sized-trait/2918
+pub fn rand_vector_std_gauss<T: Rng>(size: usize, rng: &mut T) -> Vec<f32> {
     let normal_rng = Normal::new(0.0, 1.0);
     (0..size).map(|_| normal_rng.ind_sample(rng) as f32).collect::<Vec<f32>>()
 }
 
 #[allow(dead_code)]
-pub fn rand_matrix_std_gauss(height: usize, width: usize, rng: &mut ThreadRng) -> Vec<Vec<f32>> {
+pub fn rand_matrix_std_gauss<T: Rng>(height: usize, width: usize, rng: &mut T) -> Vec<Vec<f32>> {
     (0..height).map(|_| rand_vector_std_gauss(width, rng)).collect::<Vec<Vec<f32>>>()
 }
 
