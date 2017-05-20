@@ -1,13 +1,21 @@
 use ga::Individual;
 
+/// Structure to hold results for the genetic algorithm run.
 #[derive(Debug, Clone)]
 pub struct GAResult {
+    /// Array of minimal absolute values of fitness for each generation.
     pub min_fitness: Vec<f32>,
+    /// Array of maximal absolute values of fitness for each generation.
     pub max_fitness: Vec<f32>,
+    /// Array of average absolute values of fitness for each generation.
     pub avg_fitness: Vec<f32>,
+    /// Best individual ever found during the single run.
     pub best: Individual,
+    /// Number of function evaluations required to find the `best` individual.
     pub best_fe_count: u32,
+    /// Number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
     pub first_hit_fe_count: u32,
+    /// Total number of function evaluations used in the current run.
     pub fe_count: u32,
 }
 

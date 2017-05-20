@@ -1,7 +1,8 @@
 [package]
 name = "revonet"
 version = "0.1.0"
-authors = ["yurytsoy <yurytsoy@gmail.com>"]
+authors = ["Yury Tsoy <yurytsoy@gmail.com>"]
+license = "GPL-3.0"
 
 [dependencies]
 rand = "*"

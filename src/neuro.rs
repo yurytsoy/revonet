@@ -3,9 +3,14 @@ use std::fmt::Debug;
 
 use math::*;
 
+// Should it be just named vector-function as this is what it really is?5
+pub trait NeuralNetwork {
+    fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
+}
+
 #[derive(Debug)]
 #[allow(dead_code)]
-struct MultilayeredNetwork {
+pub struct MultilayeredNetwork {
     inputs_num: usize,
     outputs_num: usize,
     layers: Vec<Box<Layer>>,
@@ -52,14 +57,6 @@ impl MultilayeredNetwork {
         self.is_built = true;
     }
 
-    pub fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
-        let mut input = Vec::from(xs);
-        for l in self.layers.iter_mut() {
-            input = l.compute(&input);
-        }
-        Vec::from(input)
-    }
-
     /// Returns weights and biases layer by layer.
     pub fn get_weights(&self) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
         if !self.is_built {
@@ -85,6 +82,16 @@ impl MultilayeredNetwork {
         for k in 0..self.layers.len() {
             self.layers[k].set_weights(&wss[k], &bss[k]);
         }
+    }
+}
+
+impl NeuralNetwork for MultilayeredNetwork {
+    fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
+        let mut input = Vec::from(xs);
+        for l in self.layers.iter_mut() {
+            input = l.compute(&input);
+        }
+        Vec::from(input)
     }
 }
 
@@ -182,6 +189,15 @@ impl ActivationFunction for SigmoidActivation {
     fn new() -> SigmoidActivation {SigmoidActivation{}}
     fn compute(&self, x: f32) -> f32 {
         1f32 / (1f32 + (-x).exp())
+    }
+}
+
+#[derive(Debug)]
+pub struct ReluActivation;
+impl ActivationFunction for ReluActivation {
+    fn new() -> ReluActivation {ReluActivation{}}
+    fn compute(&self, x: f32) -> f32 {
+        if x > 0f32 {x} else {0f32}
     }
 }
 

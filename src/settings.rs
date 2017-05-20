@@ -1,8 +1,11 @@
+/// Settings for genetic algorithm.
 #[derive(Debug, Clone)]
 pub struct GASettings {
     pub rng_seed: u32,
     pub pop_size: u32,
+    /// Number of parameters/genes for the problem.
     pub param_count: u32,
+    /// Number of generations.
     pub gen_count: u32,
     pub tour_size: u32,
     pub use_elite: bool,
