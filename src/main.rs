@@ -35,6 +35,9 @@
 
 extern crate rand;
 
+use rand::{Rng, StdRng, SeedableRng};
+
+mod context;
 mod ga;
 mod math;
 mod neproblem;
@@ -43,19 +46,29 @@ mod problem;
 mod result;
 mod settings;
 
-use ga::*;
-use problem::*;
-use settings::*;
+// use ga::*;
+// use problem::*;
+// use settings::*;
 
 fn main() {
-    let pop_size = 20u32;
-    let problem_dim = 10u32;
-    let problem = RosenbrockProblem{};
+    const PTS_COUNT: u32 = 100;
+    let seed = 0;
+    let mut rng: StdRng = StdRng::from_seed(&[seed]);
+    let mut v = Vec::new();
+    for _ in 0..PTS_COUNT {
+        v.push(rng.gen::<f32>());
+    }
+    println!("{:?}", v);
 
-    let gen_count = 10u32;
-    let settings = GASettings::new(pop_size, gen_count, problem_dim);
-    let mut ga = GA::new(settings, &problem);
-    ga.run(gen_count);
-    let res = ga.get_result().expect("No GA result is available!");
-    println!("\n\nGA results: {:?}", res);
+
+    // let pop_size = 20u32;
+    // let problem_dim = 10u32;
+    // let problem = RosenbrockProblem{};
+
+    // let gen_count = 10u32;
+    // let settings = GASettings::new(pop_size, gen_count, problem_dim);
+    // let mut ga = GA::new(settings, &problem);
+    // ga.run(gen_count);
+    // let res = ga.get_result().expect("No GA result is available!");
+    // println!("\n\nGA results: {:?}", res);
 }

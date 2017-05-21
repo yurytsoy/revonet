@@ -3,64 +3,68 @@ use rand::{Rng, SeedableRng, StdRng};
 use rand::distributions::{Normal, IndependentSample, Range};
 use std;
 
+use context::*;
 use math::*;
 use problem::*;
 use result::*;
 use settings::*;
 
 pub struct GA<'a> {
+    ctx: Option<EAContext<'a>>,
     settings: GASettings,
-    population: Vec<Individual>,
+    // population: Vec<Individual>,
     problem: &'a OptProblem,
-    result: Option<GAResult>,
-    rng: StdRng,
+    // result: Option<GAResult>,
 }
 
 impl<'a> GA<'a> {
     pub fn new(settings: GASettings, problem: &'a OptProblem) -> GA {
-        let seed: &[_] = &[settings.rng_seed as usize];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(&[settings.rng_seed as usize]);
         let pop_size = settings.pop_size;
         let param_count = settings.param_count;
         GA{settings: settings,
-           population: create_population(pop_size, param_count, &mut rng),
-           rng: rng,
            problem: problem,
-           result: None}
+           ctx: None,
+           }
     }
 
     pub fn run(&mut self, gen_count: u32) {
-        let mut cur_result = GAResult::new();
+        self.ctx = Some(EAContext::new(&'a self.settings));
+        let ctx: &mut EAContext = &mut self.ctx.expect("Failed to create EA context");
+        let mut cur_result = &mut ctx.result;
         for t in 0..gen_count {
             // evaluation
-            let fits = evaluate(&self.population, self.problem, &mut cur_result);
+            ctx.fitness = evaluate(&ctx.population, self.problem, cur_result);
             // TODO: the code below does not look very nice... Shouldn't it be inside `evaluate`? Fix using context.
-            for k in 0..self.population.len() {
-                self.population[k].fitness = fits[k];
-            }
+            // for k in 0..ctx.population.len() {
+            //     ctx.population[k].fitness = fits[k];
+            // }
 
             // selection
-            let sel_inds = select(&fits, self.settings.tour_size, &mut self.rng);
+            let sel_inds = select(&ctx.fitness, self.settings.tour_size, &mut ctx.rng);
 
             // crossover
             let mut children: Vec<Individual> = Vec::with_capacity(self.settings.pop_size as usize + 1);
-            cross(&self.population, &sel_inds, &mut children, self.settings.use_elite, self.settings.x_prob, self.settings.x_alpha, &mut self.rng);
+            cross(&ctx.population, &sel_inds, &mut children, self.settings.use_elite, self.settings.x_prob, self.settings.x_alpha, &mut ctx.rng);
 
             // mutation
             mutate(&mut children, self.settings.mut_prob);
 
             // next gen
-            self.population.clone_from(&children);
-            self.population.truncate(self.settings.pop_size as usize);
+            ctx.population.clone_from(&children);
+            ctx.population.truncate(self.settings.pop_size as usize);
 
-            println!("> {} : {:?}", t, fits);
-            println!(" Best fitness at generation {} : {}\n", t, min(&fits));
+            println!("> {} : {:?}", t, ctx.fitness);
+            println!(" Best fitness at generation {} : {}\n", t, min(&ctx.fitness));
         }
-        self.result = Some(cur_result);
+        // ctx.result = Some(cur_result);
     }
 
     pub fn get_result(&self) -> Option<GAResult> {
-        self.result.clone()
+        match self.ctx {
+            Some(ctx) => Some(ctx.result.clone()),
+            None => None
+        }
     }
 }
 
@@ -76,7 +80,7 @@ impl Individual {
     }
 }
 
-fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<Individual> {
+pub fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<Individual> {
     (0..pop_size)
         .map(|_| {
             let mut res_ind = Individual::new();

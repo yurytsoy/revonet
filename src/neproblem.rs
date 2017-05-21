@@ -29,6 +29,15 @@ pub struct SymbolicRegressionProblem {
 
 #[allow(dead_code)]
 impl SymbolicRegressionProblem {
+    pub fn new(problem_type: char) -> SymbolicRegressionProblem {
+        match problem_type {
+            'f' => SymbolicRegressionProblem::new_f(),
+            'g' => SymbolicRegressionProblem::new_g(),
+            'h' => SymbolicRegressionProblem::new_h(),
+            _ => panic!(format!("Unknown problem type for symbolic regression problem: {}", problem_type))
+        }
+    }
+
     pub fn new_f() -> SymbolicRegressionProblem {
         SymbolicRegressionProblem{func: SymbolicRegressionProblem::f}
     }
@@ -69,8 +78,7 @@ impl NeuroProblem for SymbolicRegressionProblem {
         let mut input = vec![0f32];
         let mut output;
         
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng: StdRng = StdRng::from_seed(&[0]);
         for _ in 0..PTS_COUNT {
             let x = rng.gen::<f32>(); // sample from [-1, 1]
             let y = (self.func)(&self, x);
