@@ -10,8 +10,8 @@ use result::*;
 use settings::*;
 
 pub struct GA<'a> {
-    ctx: Option<EAContext<'a>>,
-    settings: GASettings,
+    ctx: EAContext,
+    // settings: GASettings,
     // population: Vec<Individual>,
     problem: &'a OptProblem,
     // result: Option<GAResult>,
@@ -20,51 +20,43 @@ pub struct GA<'a> {
 impl<'a> GA<'a> {
     pub fn new(settings: GASettings, problem: &'a OptProblem) -> GA {
         let mut rng = StdRng::from_seed(&[settings.rng_seed as usize]);
-        let pop_size = settings.pop_size;
-        let param_count = settings.param_count;
-        GA{settings: settings,
-           problem: problem,
-           ctx: None,
-           }
+        // let pop_size = settings.pop_size;
+        // let param_count = settings.param_count;
+        GA{problem: problem,
+           ctx: EAContext::new(settings),
+        }
     }
 
     pub fn run(&mut self, gen_count: u32) {
-        self.ctx = Some(EAContext::new(&'a self.settings));
-        let ctx: &mut EAContext = &mut self.ctx.expect("Failed to create EA context");
+        // self.ctx = Some(EAContext::new(&self.settings));
+        let ctx: &mut EAContext = &mut self.ctx;
+        let settings: &GASettings = &ctx.settings;
         let mut cur_result = &mut ctx.result;
         for t in 0..gen_count {
             // evaluation
-            ctx.fitness = evaluate(&ctx.population, self.problem, cur_result);
-            // TODO: the code below does not look very nice... Shouldn't it be inside `evaluate`? Fix using context.
-            // for k in 0..ctx.population.len() {
-            //     ctx.population[k].fitness = fits[k];
-            // }
+            ctx.fitness = evaluate(&mut ctx.population, self.problem, cur_result);
 
             // selection
-            let sel_inds = select(&ctx.fitness, self.settings.tour_size, &mut ctx.rng);
+            let sel_inds = select(&ctx.fitness, settings.tour_size, &mut ctx.rng);
 
             // crossover
-            let mut children: Vec<Individual> = Vec::with_capacity(self.settings.pop_size as usize + 1);
-            cross(&ctx.population, &sel_inds, &mut children, self.settings.use_elite, self.settings.x_prob, self.settings.x_alpha, &mut ctx.rng);
+            let mut children: Vec<Individual> = Vec::with_capacity(settings.pop_size as usize + 1);
+            cross(&ctx.population, &sel_inds, &mut children, settings.use_elite, settings.x_prob, settings.x_alpha, &mut ctx.rng);
 
             // mutation
-            mutate(&mut children, self.settings.mut_prob);
+            mutate(&mut children, settings.mut_prob);
 
             // next gen
             ctx.population.clone_from(&children);
-            ctx.population.truncate(self.settings.pop_size as usize);
+            ctx.population.truncate(settings.pop_size as usize);
 
             println!("> {} : {:?}", t, ctx.fitness);
             println!(" Best fitness at generation {} : {}\n", t, min(&ctx.fitness));
         }
-        // ctx.result = Some(cur_result);
     }
 
-    pub fn get_result(&self) -> Option<GAResult> {
-        match self.ctx {
-            Some(ctx) => Some(ctx.result.clone()),
-            None => None
-        }
+    pub fn get_result(&self) -> GAResult {
+        self.ctx.result.clone()
     }
 }
 
@@ -90,8 +82,13 @@ pub fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec
         .collect::<Vec<Individual>>()
 }
 
-fn evaluate(popul: &Vec<Individual>, problem: &OptProblem, cur_result: &mut GAResult) -> Vec<f32> {
-    let fits = popul.into_iter().map(|ind| problem.compute(&ind.genes)).collect::<Vec<f32>>();
+fn evaluate(popul: &mut Vec<Individual>, problem: &OptProblem, cur_result: &mut GAResult) -> Vec<f32> {
+    let fits = popul.iter_mut().map(|ref mut ind| {
+            let f = problem.compute(&ind.genes);
+            ind.fitness = f;
+            f
+        }).collect::<Vec<f32>>();
+    println!("{:?}", fits);
     if cur_result.first_hit_fe_count == 0 {
         for k in 0..fits.len() {
             if problem.is_solution(fits[k]) {
