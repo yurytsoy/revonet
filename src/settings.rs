@@ -1,6 +1,6 @@
 /// Settings for genetic algorithm.
 #[derive(Debug, Clone)]
-pub struct GASettings {
+pub struct EASettings {
     pub rng_seed: u32,
     pub pop_size: u32,
     /// Number of parameters/genes for the problem.
@@ -15,9 +15,9 @@ pub struct GASettings {
     pub mut_sigma: f32,
 }
 
-impl GASettings {
-    pub fn new(pop_size: u32, gen_count: u32, param_count: u32) -> GASettings {
-        GASettings{
+impl EASettings {
+    pub fn new(pop_size: u32, gen_count: u32, param_count: u32) -> EASettings {
+        EASettings{
             rng_seed: 0,
             param_count: param_count,
             pop_size: pop_size,

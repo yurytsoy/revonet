@@ -4,6 +4,7 @@ use rand::distributions::{Normal, IndependentSample, Range};
 use std;
 
 use context::*;
+use ea::*;
 use math::*;
 use problem::*;
 use result::*;
@@ -11,118 +12,29 @@ use settings::*;
 
 pub struct GA<'a> {
     ctx: EAContext,
-    // settings: GASettings,
-    // population: Vec<Individual>,
-    problem: &'a OptProblem,
-    // result: Option<GAResult>,
+    problem: &'a Problem,
 }
 
 impl<'a> GA<'a> {
-    pub fn new(settings: GASettings, problem: &'a OptProblem) -> GA {
-        let mut rng = StdRng::from_seed(&[settings.rng_seed as usize]);
-        // let pop_size = settings.pop_size;
-        // let param_count = settings.param_count;
+    pub fn new(settings: EASettings, problem: &'a Problem) -> GA {
         GA{problem: problem,
            ctx: EAContext::new(settings),
         }
     }
 
-    pub fn run(&mut self, gen_count: u32) {
-        // self.ctx = Some(EAContext::new(&self.settings));
-        let ctx: &mut EAContext = &mut self.ctx;
-        let settings: &GASettings = &ctx.settings;
-        let mut cur_result = &mut ctx.result;
-        for t in 0..gen_count {
-            // evaluation
-            ctx.fitness = evaluate(&mut ctx.population, self.problem, cur_result);
-
-            // selection
-            let sel_inds = select(&ctx.fitness, settings.tour_size, &mut ctx.rng);
-
-            // crossover
-            let mut children: Vec<Individual> = Vec::with_capacity(settings.pop_size as usize + 1);
-            cross(&ctx.population, &sel_inds, &mut children, settings.use_elite, settings.x_prob, settings.x_alpha, &mut ctx.rng);
-
-            // mutation
-            mutate(&mut children, settings.mut_prob);
-
-            // next gen
-            ctx.population.clone_from(&children);
-            ctx.population.truncate(settings.pop_size as usize);
-
-            println!("> {} : {:?}", t, ctx.fitness);
-            println!(" Best fitness at generation {} : {}\n", t, min(&ctx.fitness));
-        }
-    }
-
-    pub fn get_result(&self) -> GAResult {
-        self.ctx.result.clone()
+    pub fn run(&mut self, gen_count: u32) -> Result<EAResult, ()> {
+        let mut ctx = self.ctx.clone();
+        let res = self.run_with_context(&mut ctx, self.problem, gen_count);
+        self.ctx = ctx;
+        res
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Individual {
-    genes: Vec<f32>,
-    fitness: f32,
-}
-
-impl Individual {
-    pub fn new() -> Individual {
-        Individual{genes: Vec::new(), fitness: std::f32::NAN}
+impl<'a> EA for GA<'a> {
+    fn breed(&self, ctx: &mut EAContext, sel_inds: &Vec<usize>, children: &mut Vec<Individual>) {
+        cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_prob);
     }
-}
-
-pub fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<Individual> {
-    (0..pop_size)
-        .map(|_| {
-            let mut res_ind = Individual::new();
-            res_ind.genes = rand_vector_std_gauss(ind_size as usize, &mut rng);
-            res_ind
-        })
-        .collect::<Vec<Individual>>()
-}
-
-fn evaluate(popul: &mut Vec<Individual>, problem: &OptProblem, cur_result: &mut GAResult) -> Vec<f32> {
-    let fits = popul.iter_mut().map(|ref mut ind| {
-            let f = problem.compute(&ind.genes);
-            ind.fitness = f;
-            f
-        }).collect::<Vec<f32>>();
-    println!("{:?}", fits);
-    if cur_result.first_hit_fe_count == 0 {
-        for k in 0..fits.len() {
-            if problem.is_solution(fits[k]) {
-                cur_result.first_hit_fe_count = cur_result.fe_count + (k+1) as u32;
-                break;
-            }
-        }
-    }
-
-    cur_result.avg_fitness.push(mean(&fits));
-    cur_result.min_fitness.push(min(&fits));
-    cur_result.max_fitness.push(max(&fits));
-    if cur_result.best.fitness.is_nan() || (cur_result.best.fitness > *cur_result.min_fitness.last().unwrap()) {
-        let idx = (&fits).iter().position(|&x| x == *cur_result.min_fitness.last().unwrap()).expect("Min fitness is not found");
-        cur_result.best = popul[idx].clone();
-        cur_result.best_fe_count = cur_result.fe_count + (idx+1) as u32;
-    }
-    cur_result.best.fitness = *cur_result.min_fitness.last().unwrap();
-    cur_result.fe_count += fits.len() as u32;
-    fits
-}
-
-fn select(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<usize> {
-    let range = Range::new(0, fits.len());
-    let mut sel_inds: Vec<usize> = Vec::with_capacity(fits.len());  // vector of indices of selected inds. +1 in case of elite individual is used.
-    for _ in 0..fits.len() {
-        let tour_inds = (0..tour_size).map(|_| range.ind_sample(&mut rng)).collect::<Vec<usize>>();
-        let winner = tour_inds.iter().fold(tour_inds[0], |w_idx, &k|
-            if fits[w_idx] < fits[k] {w_idx}
-            else {k}
-        );
-        sel_inds.push(winner);
-    }
-    sel_inds
 }
 
 fn cross<T: Rng>(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut Vec<Individual>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut T) {
@@ -188,11 +100,5 @@ fn mutate_gauss(ind: &mut Individual, prob: f32) {
             ind.genes[k] += normal_rng.ind_sample(&mut rand::thread_rng()) as f32;
         }
     }
-}
-
-fn get_best_individual(popul: &Vec<Individual>) -> Individual {
-    let min_fitness = popul.into_iter().fold(std::f32::MAX, |s, ref ind| if s < ind.fitness {s} else {ind.fitness});
-    let idx = popul.into_iter().position(|ref x| x.fitness == min_fitness).expect("Min fitness is not found");
-    popul[idx].clone()
 }
 

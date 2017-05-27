@@ -1,5 +1,6 @@
 use rand::{Rng, StdRng, SeedableRng};
 
+use ea::*;
 use neuro::{NeuralNetwork};
 use problem::*;
 
@@ -66,7 +67,12 @@ impl SymbolicRegressionProblem {
     }
 }
 
-impl Problem for SymbolicRegressionProblem {}
+impl Problem for SymbolicRegressionProblem {
+    fn compute_from_ind(&self, ind: &Individual) -> f32 {
+       unimplemented!()
+    }
+}
+
 impl NeuroProblem for SymbolicRegressionProblem {
     fn get_inputs_count(&self) -> usize {1}
     fn get_outputs_count(&self) -> usize {1}

@@ -1,13 +1,23 @@
 use std;
 
+use ea::*;
+
 pub trait Problem{
     fn is_solution(&self, value: f32) -> bool {
         value < 1e-3f32
     }
+
+    fn compute_from_ind(&self, ind: &Individual) -> f32;
 }
 
-pub trait OptProblem: Problem{
+pub trait OptProblem: Problem {
     fn compute(&self, v: &Vec<f32>) -> f32;
+}
+
+impl<T: OptProblem> Problem for T {
+    fn compute_from_ind(&self, ind: &Individual) -> f32 {
+       self.compute(&ind.genes)
+    }
 }
 
 //---------------------------------------------------------------
@@ -17,18 +27,15 @@ Some other functions: https://en.wikipedia.org/wiki/Test_functions_for_optimizat
 
 #[allow(dead_code)]
 pub struct SphereProblem;
-impl Problem for SphereProblem {}
 impl OptProblem for SphereProblem {
     fn compute(&self, v: &Vec<f32>) -> f32 {
         if v.len() > 0 {v.iter().fold(0f32, |s, x| s + x*x)} else {std::f32::NAN}
     }
 }
 
-
 //---------------------------------------------------------------
 #[allow(dead_code)]
 pub struct RastriginProblem;
-impl Problem for RastriginProblem {}
 impl OptProblem for RastriginProblem {
     fn compute(&self, v: &Vec<f32>) -> f32 {
         const PI2: f32 = 2f32 * std::f32::consts::PI;
@@ -41,7 +48,6 @@ impl OptProblem for RastriginProblem {
 //---------------------------------------------------------------
 #[allow(dead_code)]
 pub struct RosenbrockProblem;
-impl Problem for RosenbrockProblem {}
 impl OptProblem for RosenbrockProblem {
     fn compute(&self, v: &Vec<f32>) -> f32 {
         if v.len() == 0 {return std::f32::NAN;}

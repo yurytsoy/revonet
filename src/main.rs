@@ -38,14 +38,17 @@ extern crate rand;
 use rand::{Rng, StdRng, SeedableRng};
 
 mod context;
+mod ea;
 mod ga;
 mod math;
+mod ne;
 mod neproblem;
 mod neuro;
 mod problem;
 mod result;
 mod settings;
 
+use ea::*;
 use ga::*;
 use problem::*;
 use settings::*;
@@ -63,12 +66,11 @@ fn main() {
 
     let pop_size = 20u32;
     let problem_dim = 10u32;
-    let problem = RosenbrockProblem{};
+    let problem = SphereProblem{};
 
     let gen_count = 10u32;
-    let settings = GASettings::new(pop_size, gen_count, problem_dim);
+    let settings = EASettings::new(pop_size, gen_count, problem_dim);
     let mut ga = GA::new(settings, &problem);
-    ga.run(gen_count);
-    let res = ga.get_result();
+    let res = ga.run(gen_count).expect("Error during GA run");
     println!("\n\nGA results: {:?}", res);
 }

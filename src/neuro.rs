@@ -201,6 +201,8 @@ impl ActivationFunction for ReluActivation {
     }
 }
 
+//========================================
+
 #[cfg(test)]
 mod test {
     use rand;

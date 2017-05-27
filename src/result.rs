@@ -1,8 +1,8 @@
-use ga::Individual;
+use ea::Individual;
 
 /// Structure to hold results for the genetic algorithm run.
 #[derive(Debug, Clone)]
-pub struct GAResult {
+pub struct EAResult {
     /// Array of minimal absolute values of fitness for each generation.
     pub min_fitness: Vec<f32>,
     /// Array of maximal absolute values of fitness for each generation.
@@ -19,9 +19,9 @@ pub struct GAResult {
     pub fe_count: u32,
 }
 
-impl GAResult {
-    pub fn new() -> GAResult {
-        GAResult{avg_fitness: Vec::new(),
+impl EAResult {
+    pub fn new() -> EAResult {
+        EAResult{avg_fitness: Vec::new(),
                  min_fitness: Vec::new(),
                  max_fitness: Vec::new(),
                  best: Individual::new(),
