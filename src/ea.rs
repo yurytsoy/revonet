@@ -1,7 +1,8 @@
 use rand;
-use rand::{Rng};
+use rand::{Rng, StdRng};
 use rand::distributions::{Normal, IndependentSample, Range};
 use std;
+use std::rc::Rc;
 
 use context::*;
 use math::*;
@@ -9,20 +10,54 @@ use problem::*;
 use result::*;
 use settings::*;
 
+pub trait Individual: Clone{
+    fn new() -> Self;
+    fn init<R: Rng>(&mut self, size: usize, &mut R);
+    fn get_fitness(&self) -> f32;
+    fn set_fitness(&mut self, fitness: f32);
+    fn get_genes(&self) -> &[f32];
+    fn get_genes_mut(&mut self) -> &mut Vec<f32>;
+}
+
 #[derive(Debug, Clone)]
-pub struct Individual {
+pub struct RealCodedIndividual {
     pub genes: Vec<f32>,
     pub fitness: f32,
 }
 
-impl Individual {
-    pub fn new() -> Individual {
-        Individual{genes: Vec::new(), fitness: std::f32::NAN}
+impl RealCodedIndividual {
+}
+
+impl Individual for RealCodedIndividual{
+    fn new() -> Self {
+        RealCodedIndividual{genes: Vec::new(), fitness: std::f32::NAN}
+    }
+
+    fn init<R: Rng>(&mut self, size: usize, mut rng: &mut R) {
+        self.genes = rand_vector_std_gauss(size as usize, rng);
+    }
+
+    fn get_fitness(&self) -> f32 {
+        self.fitness
+    }
+
+    fn set_fitness(&mut self, fitness: f32) {
+        self.fitness = fitness;
+    }
+
+    fn get_genes(&self) -> &[f32] {
+        &self.genes
+    }
+
+    fn get_genes_mut(&mut self) -> &mut Vec<f32> {
+        &mut self.genes
     }
 }
 
-pub trait EA {
-    fn run_with_context(&mut self, mut ctx: &mut EAContext, problem: &Problem, gen_count: u32) -> Result<EAResult, ()> {
+//======================================================================
+
+pub trait EA<T: Individual> {
+    fn run_with_context<P: Problem>(&mut self, mut ctx: &mut EAContext<T>, problem: &P, gen_count: u32) -> Result<Rc<&EAResult<T>>, ()> {
         for t in 0..gen_count {
             // evaluation
             self.evaluate(&mut ctx, problem);
@@ -31,7 +66,7 @@ pub trait EA {
             let sel_inds = self.select(&mut ctx);
 
             // crossover
-            let mut children: Vec<Individual> = Vec::with_capacity(ctx.settings.pop_size as usize);
+            let mut children: Vec<T> = Vec::with_capacity(ctx.settings.pop_size as usize);
             self.breed(&mut ctx, &sel_inds,  &mut children);
 
             // next gen
@@ -40,17 +75,17 @@ pub trait EA {
             println!("> {} : {:?}", t, ctx.fitness);
             println!(" Best fitness at generation {} : {}\n", t, min(&ctx.fitness));
         }
-        Ok(ctx.result.clone())
+        Ok(Rc::new(&ctx.result))
     }
 
-    fn evaluate(&self, ctx: &mut EAContext, problem: &Problem) {
+    fn evaluate<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P) {
         // ctx.fitness = evaluate(&mut ctx.population, problem, &mut ctx.result);
         let cur_result = &mut ctx.result;
         let popul = &mut ctx.population;
 
-        ctx.fitness = popul.iter_mut().map(|ref mut ind| {
-                ind.fitness = problem.compute_from_ind(ind);
-                ind.fitness
+        ctx.fitness = popul.iter_mut().map(|&mut ind| {
+                ind.set_fitness(problem.compute_from_ind(&ind));
+                ind.get_fitness()
             }).collect::<Vec<f32>>();
         let fits = &ctx.fitness;
         // println!("{:?}", fits);
@@ -64,42 +99,44 @@ pub trait EA {
         }
 
         cur_result.avg_fitness.push(mean(&fits));
-        cur_result.min_fitness.push(min(&fits));
         cur_result.max_fitness.push(max(&fits));
-        if cur_result.best.fitness.is_nan() || (cur_result.best.fitness > *cur_result.min_fitness.last().unwrap()) {
-            let idx = (&fits).iter().position(|&x| x == *cur_result.min_fitness.last().unwrap()).expect("Min fitness is not found");
+
+        let last_min_fitness = min(&fits);
+        cur_result.min_fitness.push(last_min_fitness);
+        if cur_result.best.get_fitness().is_nan() || (cur_result.best.get_fitness() > last_min_fitness) {
+            let idx = (&fits).iter().position(|&x| x == last_min_fitness).expect("Min fitness is not found");
             cur_result.best = popul[idx].clone();
             cur_result.best_fe_count = cur_result.fe_count + (idx+1) as u32;
         }
-        cur_result.best.fitness = *cur_result.min_fitness.last().unwrap();
+        cur_result.best.set_fitness(last_min_fitness);
         cur_result.fe_count += fits.len() as u32;
     }
 
-    fn select(&self, ctx: &mut EAContext) -> Vec<usize> {
+    fn select(&self, ctx: &mut EAContext<T>) -> Vec<usize> {
         select_tournament(&ctx.fitness, ctx.settings.tour_size, &mut ctx.rng)
     }
 
-    fn next_generation(&self, ctx: &mut EAContext, children: &Vec<Individual>) {
+    fn next_generation(&self, ctx: &mut EAContext<T>, children: &Vec<T>) {
         ctx.population.clone_from(children);
         ctx.population.truncate(ctx.settings.pop_size as usize);
     }
 
-    fn breed(&self, ctx: &mut EAContext, sel_inds: &Vec<usize>, children: &mut Vec<Individual>);
+    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>);
 }
 
-pub fn create_population(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<Individual> {
+pub fn create_population<T: Individual>(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<T> {
     (0..pop_size)
         .map(|_| {
-            let mut res_ind = Individual::new();
-            res_ind.genes = rand_vector_std_gauss(ind_size as usize, &mut rng);
+            let mut res_ind = T::new();
+            res_ind.init(ind_size as usize, &mut rng);
             res_ind
         })
-        .collect::<Vec<Individual>>()
+        .collect::<Vec<T>>()
 }
 
 fn select_tournament(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<usize> {
     let range = Range::new(0, fits.len());
-    let mut sel_inds: Vec<usize> = Vec::with_capacity(fits.len());  // vector of indices of selected inds. +1 in case of elite individual is used.
+    let mut sel_inds: Vec<usize> = Vec::with_capacity(fits.len());  // vector of indices of selected inds. +1 in case of elite RealCodedindividual is used.
     for _ in 0..fits.len() {
         let tour_inds = (0..tour_size).map(|_| range.ind_sample(&mut rng)).collect::<Vec<usize>>();
         let winner = tour_inds.iter().fold(tour_inds[0], |w_idx, &k|
@@ -111,8 +148,8 @@ fn select_tournament(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<
     sel_inds
 }
 
-pub fn get_best_individual(popul: &Vec<Individual>) -> Individual {
-    let min_fitness = popul.into_iter().fold(std::f32::MAX, |s, ref ind| if s < ind.fitness {s} else {ind.fitness});
-    let idx = popul.into_iter().position(|ref x| x.fitness == min_fitness).expect("Min fitness is not found");
+pub fn get_best_individual<T: Individual>(popul: &Vec<T>) -> T {
+    let min_fitness = popul.into_iter().fold(std::f32::MAX, |s, ref ind| if s < ind.get_fitness() {s} else {ind.get_fitness()});
+    let idx = popul.into_iter().position(|ref x| x.get_fitness() == min_fitness).expect("Min fitness is not found");
     popul[idx].clone()
 }

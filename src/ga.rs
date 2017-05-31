@@ -2,6 +2,7 @@ use rand;
 use rand::{Rng, SeedableRng, StdRng};
 use rand::distributions::{Normal, IndependentSample, Range};
 use std;
+use std::rc::Rc;
 
 use context::*;
 use ea::*;
@@ -10,19 +11,19 @@ use problem::*;
 use result::*;
 use settings::*;
 
-pub struct GA<'a> {
-    ctx: EAContext,
-    problem: &'a Problem,
+pub struct GA<'a, P: Problem + 'a, T: Individual> {
+    ctx: EAContext<T>,
+    problem: &'a P,
 }
 
-impl<'a> GA<'a> {
-    pub fn new(settings: EASettings, problem: &'a Problem) -> GA {
+impl<'a, P: Problem, T: Individual> GA<'a, P, T> {
+    pub fn new(settings: EASettings, problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
            ctx: EAContext::new(settings),
         }
     }
 
-    pub fn run(&mut self, gen_count: u32) -> Result<EAResult, ()> {
+    pub fn run(&mut self, gen_count: u32) -> Result<Rc<EAResult<T>>, ()> {
         let mut ctx = self.ctx.clone();
         let res = self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = ctx;
@@ -30,14 +31,14 @@ impl<'a> GA<'a> {
     }
 }
 
-impl<'a> EA for GA<'a> {
-    fn breed(&self, ctx: &mut EAContext, sel_inds: &Vec<usize>, children: &mut Vec<Individual>) {
+impl<'a, P: Problem, T: Individual> EA<T> for GA<'a, P, T> {
+    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_prob);
+        mutate(children, ctx.settings.mut_prob, &mut ctx.rng);
     }
 }
 
-fn cross<T: Rng>(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut Vec<Individual>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut T) {
+pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut R) {
     let range = Range::new(0, popul.len());
     if use_elite {
         children.push(get_best_individual(popul));
@@ -51,8 +52,8 @@ fn cross<T: Rng>(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut 
         }
 
         if rand::random::<f32>() < x_prob {
-            let mut c1 = Individual::new();
-            let mut c2 = Individual::new();
+            let mut c1 = T::new();
+            let mut c2 = T::new();
             cross_blx_alpha(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha, rng);
             children.push(c1);
             children.push(c2);
@@ -65,39 +66,42 @@ fn cross<T: Rng>(popul: &Vec<Individual>, sel_inds: &Vec<usize>, children: &mut 
     }
 }
 
-fn cross_blx_alpha(p1: &Individual, p2: &Individual, c1: &mut Individual, c2: &mut Individual, alpha: f32, mut rng: &mut Rng) {
-    assert!(p1.genes.len() == p2.genes.len());
+fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut Rng) {
+    let p1_genes = p1.get_genes();
+    let p2_genes = p2.get_genes();
+    assert!(p1_genes.len() == p2_genes.len());
 
-    let gene_count = p1.genes.len();
-    c1.genes = Vec::with_capacity(gene_count);
-    c2.genes = Vec::with_capacity(gene_count);
+    let gene_count = p1_genes.len();
+    let c1_genes = c1.get_genes_mut();
+    let c2_genes = c2.get_genes_mut();
 
     for k in 0..gene_count {
-        let (min_gene, max_gene) = if p1.genes[k] > p2.genes[k] {(p2.genes[k], p1.genes[k])}
-                                   else                         {(p1.genes[k], p2.genes[k])};
+        let (min_gene, max_gene) = if p1_genes[k] > p2_genes[k] {(p2_genes[k], p1_genes[k])}
+                                   else                         {(p1_genes[k], p2_genes[k])};
         if min_gene < max_gene {
             let delta = max_gene - min_gene;
             let gene_range = Range::new(min_gene - delta*alpha, max_gene + delta*alpha);
-            c1.genes.push(gene_range.ind_sample(&mut rng));
-            c2.genes.push(gene_range.ind_sample(&mut rng));
+            c1_genes.push(gene_range.ind_sample(&mut rng));
+            c2_genes.push(gene_range.ind_sample(&mut rng));
         } else {
-            c1.genes.push(min_gene);
-            c2.genes.push(min_gene);
+            c1_genes.push(min_gene);
+            c2_genes.push(min_gene);
         }
     };
 }
 
-fn mutate(children: &mut Vec<Individual>, mut_prob: f32) {
+pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, rng: &mut R) {
     for k in 1..children.len() {
-        mutate_gauss(&mut children[k], mut_prob);
+        mutate_gauss(&mut children[k], mut_prob, rng);
     }
 }
 
-fn mutate_gauss(ind: &mut Individual, prob: f32) {
+fn mutate_gauss<T: Individual>(ind: &mut T, prob: f32, rng: &mut Rng) {
     let normal_rng = Normal::new(0.0, 0.1);
-    for k in 0..ind.genes.len() {
+    let genes = ind.get_genes_mut();
+    for k in 0..genes.len() {
         if rand::random::<f32>() < prob {
-            ind.genes[k] += normal_rng.ind_sample(&mut rand::thread_rng()) as f32;
+            genes[k] += normal_rng.ind_sample(&mut rng) as f32;
         }
     }
 }

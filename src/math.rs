@@ -1,10 +1,10 @@
 // use rand;
-use rand::{Rng};
+use rand::{Rng, StdRng};
 use rand::distributions::{Normal, IndependentSample};
 use std;
 
 /// The static type is needed according to advice here: https://users.rust-lang.org/t/dynamic-dispatch-and-sized-trait/2918
-pub fn rand_vector_std_gauss<T: Rng>(size: usize, rng: &mut T) -> Vec<f32> {
+pub fn rand_vector_std_gauss<T: Rng + Sized>(size: usize, rng: &mut T) -> Vec<f32> {
     let normal_rng = Normal::new(0.0, 1.0);
     (0..size).map(|_| normal_rng.ind_sample(rng) as f32).collect::<Vec<f32>>()
 }

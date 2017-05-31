@@ -41,8 +41,8 @@ mod context;
 mod ea;
 mod ga;
 mod math;
-mod ne;
-mod neproblem;
+// mod ne;
+// mod neproblem;
 mod neuro;
 mod problem;
 mod result;
@@ -63,14 +63,17 @@ fn main() {
     // }
     // println!("{:?}", v);
 
+    // let z = Vec::new();
+    // z.push(RealCodedIndividual::new());
+    // let z2 = z.clone();
 
     let pop_size = 20u32;
     let problem_dim = 10u32;
     let problem = SphereProblem{};
 
-    let gen_count = 10u32;
-    let settings = EASettings::new(pop_size, gen_count, problem_dim);
-    let mut ga = GA::new(settings, &problem);
-    let res = ga.run(gen_count).expect("Error during GA run");
-    println!("\n\nGA results: {:?}", res);
+    // let gen_count = 10u32;
+    // let settings = EASettings::new(pop_size, gen_count, problem_dim);
+    // let mut ga = GA::new(settings, &problem);
+    // let res = ga.run(gen_count).expect("Error during GA run");
+    // println!("\n\nGA results: {:?}", res);
 }

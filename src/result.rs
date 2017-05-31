@@ -2,7 +2,7 @@ use ea::Individual;
 
 /// Structure to hold results for the genetic algorithm run.
 #[derive(Debug, Clone)]
-pub struct EAResult {
+pub struct EAResult<T: Individual> {
     /// Array of minimal absolute values of fitness for each generation.
     pub min_fitness: Vec<f32>,
     /// Array of maximal absolute values of fitness for each generation.
@@ -10,7 +10,7 @@ pub struct EAResult {
     /// Array of average absolute values of fitness for each generation.
     pub avg_fitness: Vec<f32>,
     /// Best individual ever found during the single run.
-    pub best: Individual,
+    pub best: T,
     /// Number of function evaluations required to find the `best` individual.
     pub best_fe_count: u32,
     /// Number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
@@ -19,12 +19,12 @@ pub struct EAResult {
     pub fe_count: u32,
 }
 
-impl EAResult {
-    pub fn new() -> EAResult {
+impl<T: Individual> EAResult<T> {
+    pub fn new() -> EAResult<T> {
         EAResult{avg_fitness: Vec::new(),
                  min_fitness: Vec::new(),
                  max_fitness: Vec::new(),
-                 best: Individual::new(),
+                 best: T::new(),
                  best_fe_count: 0,
                  first_hit_fe_count: 0,
                  fe_count: 0,
