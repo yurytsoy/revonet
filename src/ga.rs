@@ -16,25 +16,29 @@ pub struct GA<'a, P: Problem + 'a, T: Individual> {
     problem: &'a P,
 }
 
-impl<'a, P: Problem, T: Individual> GA<'a, P, T> {
+impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
     pub fn new(settings: EASettings, problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
            ctx: EAContext::new(settings),
         }
     }
 
-    pub fn run(&mut self, gen_count: u32) -> Result<Rc<EAResult<T>>, ()> {
-        let mut ctx = self.ctx.clone();
-        let res = self.run_with_context(&mut ctx, self.problem, gen_count);
-        self.ctx = ctx;
-        res
+    pub fn run(&mut self, gen_count: u32) -> Result<Rc<&EAResult<T>>, ()> {
+        // let mut ctx = self.ctx.clone();
+        let res = self.run_with_context(self.problem, gen_count);
+        // self.ctx = ctx;
+        res.clone()
     }
 }
 
-impl<'a, P: Problem, T: Individual> EA<T> for GA<'a, P, T> {
+impl<'a, P: Problem, T: Individual> EA<'a, T> for GA<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_prob, &mut ctx.rng);
+    }
+
+    fn get_context_mut(&mut self) -> Rc<&mut EAContext<T>> {
+        Rc::new(&mut self.ctx)
     }
 }
 
@@ -96,12 +100,12 @@ pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, rng: 
     }
 }
 
-fn mutate_gauss<T: Individual>(ind: &mut T, prob: f32, rng: &mut Rng) {
+fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, rng: &mut R) {
     let normal_rng = Normal::new(0.0, 0.1);
     let genes = ind.get_genes_mut();
     for k in 0..genes.len() {
         if rand::random::<f32>() < prob {
-            genes[k] += normal_rng.ind_sample(&mut rng) as f32;
+            genes[k] += normal_rng.ind_sample(rng) as f32;
         }
     }
 }

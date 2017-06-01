@@ -56,8 +56,9 @@ impl Individual for RealCodedIndividual{
 
 //======================================================================
 
-pub trait EA<T: Individual> {
-    fn run_with_context<P: Problem>(&mut self, mut ctx: &mut EAContext<T>, problem: &P, gen_count: u32) -> Result<Rc<&EAResult<T>>, ()> {
+pub trait EA<'a, T: Individual> {
+    fn run_with_context<P: Problem>(&mut self, problem: &P, gen_count: u32) -> Result<Rc<&'a EAResult<T>>, ()> {
+        let mut ctx = self.get_context_mut();
         for t in 0..gen_count {
             // evaluation
             self.evaluate(&mut ctx, problem);
@@ -83,9 +84,10 @@ pub trait EA<T: Individual> {
         let cur_result = &mut ctx.result;
         let popul = &mut ctx.population;
 
-        ctx.fitness = popul.iter_mut().map(|&mut ind| {
-                ind.set_fitness(problem.compute_from_ind(&ind));
-                ind.get_fitness()
+        ctx.fitness = popul.iter_mut().map(|ref mut ind| {
+                let f = problem.compute_from_ind(ind as &mut T);
+                ind.set_fitness(f);
+                f
             }).collect::<Vec<f32>>();
         let fits = &ctx.fitness;
         // println!("{:?}", fits);
@@ -122,6 +124,8 @@ pub trait EA<T: Individual> {
     }
 
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>);
+
+    fn get_context_mut(&mut self) -> Rc<&mut EAContext<T>>;
 }
 
 pub fn create_population<T: Individual>(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<T> {
