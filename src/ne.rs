@@ -92,6 +92,6 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        let ne = NE::new(settings, &problem);
+        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(settings, &problem);
     }
 }
