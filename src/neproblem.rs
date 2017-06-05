@@ -68,7 +68,7 @@ impl SymbolicRegressionProblem {
 }
 
 impl Problem for SymbolicRegressionProblem {
-    fn compute_from_ind(&self, ind: &Individual) -> f32 {
+    fn compute_from_ind<T: Individual>(&self, ind: &T) -> f32 {
        unimplemented!()
     }
 }

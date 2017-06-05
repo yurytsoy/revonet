@@ -12,22 +12,24 @@ use result::*;
 use settings::*;
 
 pub struct GA<'a, P: Problem + 'a, T: Individual> {
-    ctx: EAContext<T>,
+    ctx: Option<EAContext<T>>,
     problem: &'a P,
 }
 
 impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
     pub fn new(settings: EASettings, problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
-           ctx: EAContext::new(settings),
+           ctx: None,
+        //    ctx: EAContext::new(settings),
         }
     }
 
-    pub fn run(&mut self, gen_count: u32) -> Result<Rc<&EAResult<T>>, ()> {
-        // let mut ctx = self.ctx.clone();
-        let res = self.run_with_context(self.problem, gen_count);
-        // self.ctx = ctx;
-        res.clone()
+    pub fn run(&'a mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
+        let gen_count = settings.gen_count;
+        let mut ctx = EAContext::new(settings);
+        self.run_with_context(&mut ctx, self.problem, gen_count);
+        self.ctx = Some(ctx);
+        Ok(Rc::new(&(&self.ctx.as_ref().unwrap()).result))
     }
 }
 
@@ -37,9 +39,13 @@ impl<'a, P: Problem, T: Individual> EA<'a, T> for GA<'a, P, T> {
         mutate(children, ctx.settings.mut_prob, &mut ctx.rng);
     }
 
-    fn get_context_mut(&mut self) -> Rc<&mut EAContext<T>> {
-        Rc::new(&mut self.ctx)
-    }
+    // fn get_context_mut(&mut self) -> &'a mut EAContext<T> {
+    //     match self.ctx.as_ref() {
+    //         Some(ctx) => {&mut ctx},
+    //         None => panic!("Context is empty")
+    //     }
+    //     // &mut self.ctx
+    // }
 }
 
 pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut R) {

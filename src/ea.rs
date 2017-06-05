@@ -57,26 +57,26 @@ impl Individual for RealCodedIndividual{
 //======================================================================
 
 pub trait EA<'a, T: Individual> {
-    fn run_with_context<P: Problem>(&mut self, problem: &P, gen_count: u32) -> Result<Rc<&'a EAResult<T>>, ()> {
-        let mut ctx = self.get_context_mut();
+    fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
+        // let mut ctx = self.get_context_mut();
         for t in 0..gen_count {
             // evaluation
-            self.evaluate(&mut ctx, problem);
+            self.evaluate(ctx, problem);
 
             // selection
-            let sel_inds = self.select(&mut ctx);
+            let sel_inds = self.select(ctx);
 
             // crossover
             let mut children: Vec<T> = Vec::with_capacity(ctx.settings.pop_size as usize);
-            self.breed(&mut ctx, &sel_inds,  &mut children);
+            self.breed(ctx, &sel_inds,  &mut children);
 
             // next gen
-            self.next_generation(&mut ctx, &children);
+            self.next_generation(ctx, &children);
 
             println!("> {} : {:?}", t, ctx.fitness);
             println!(" Best fitness at generation {} : {}\n", t, min(&ctx.fitness));
         }
-        Ok(Rc::new(&ctx.result))
+        // Ok(Rc::new(&ctx.result))
     }
 
     fn evaluate<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P) {
@@ -125,7 +125,8 @@ pub trait EA<'a, T: Individual> {
 
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>);
 
-    fn get_context_mut(&mut self) -> Rc<&mut EAContext<T>>;
+    // fn get_context_mut(&mut self) -> &'a mut EAContext<T>;
+    // fn get_context_mut(&'a mut self) -> &'a mut EAContext<T>;
 }
 
 pub fn create_population<T: Individual>(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<T> {
