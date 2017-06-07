@@ -17,10 +17,9 @@ pub struct GA<'a, P: Problem + 'a, T: Individual> {
 }
 
 impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
-    pub fn new(settings: EASettings, problem: &'a P) -> GA<P, T> {
+    pub fn new(problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
            ctx: None,
-        //    ctx: EAContext::new(settings),
         }
     }
 

@@ -1,10 +1,10 @@
-use rand::{ThreadRng};
+use rand::{Rng, ThreadRng};
 use std::fmt::Debug;
 
 use math::*;
 
-// Should it be just named vector-function as this is what it really is?5
-pub trait NeuralNetwork {
+// Should it be just named vector-function as this is what it really is?
+pub trait NeuralNetwork: Sized {
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
 }
 
@@ -28,6 +28,17 @@ impl MultilayeredNetwork {
         }
     }
 
+    pub fn from_layers<T: ActivationFunction, R: Rng+Sized>(layers: &[u32], rng: &mut R) -> MultilayeredNetwork {
+        assert!(layers.len() >= 2);
+
+        let mut res = MultilayeredNetwork::new(layers[0] as usize, layers[layers.len()-1] as usize);
+        for k in 1..(layers.len()-1) {
+            res.add_hidden_layer::<T>(layers[k] as usize);
+        }
+        res.build(rng);
+        res
+    }
+
     pub fn len(&self) -> usize {
         self.layers.len()
     }
@@ -40,7 +51,7 @@ impl MultilayeredNetwork {
         self
     }
 
-    pub fn build(&mut self, rng: &mut ThreadRng) {
+    pub fn build<R: Rng+Sized>(&mut self, rng: &mut R) {
         if self.is_built {
             panic!("The network has already been built.");
         }
@@ -98,7 +109,7 @@ impl NeuralNetwork for MultilayeredNetwork {
 //========================================
 
 trait Layer: Debug {
-    fn init_weights(&mut self, inputs_num: usize, rng: &mut ThreadRng);
+    fn init_weights<R: Rng+Sized>(&mut self, inputs_num: usize, rng: &mut R);
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
     fn len(&self) -> usize;
     fn get_weights(&self) -> (Vec<f32>, Vec<f32>);
@@ -130,7 +141,7 @@ impl<T: ActivationFunction> NeuralLayer<T> {
 
 #[allow(dead_code)]
 impl<T: ActivationFunction> Layer for NeuralLayer<T> {
-    fn init_weights(&mut self, inputs_num: usize, rng: &mut ThreadRng) {
+    fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
         // println!("Init weights: {} nodes, {} inputs", self.size, inputs_num);
         for _ in 0..self.size {
             self.weights.push(rand_vector_std_gauss(inputs_num, rng));

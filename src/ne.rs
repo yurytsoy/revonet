@@ -7,21 +7,41 @@ use ea::*;
 use ga::*;
 use math::*;
 use neproblem::*;
+use neuro::*;
 use problem::*;
 use result::*;
 use settings::*;
 
 #[derive(Clone)]
-struct NEIndividual {
+struct NEIndividual<T: NeuralNetwork> {
     genes: Vec<f32>,
     fitness: f32,
+    network: Option<T>,
 }
 
-impl Individual for NEIndividual {
-    fn new() -> NEIndividual {
+impl<T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
+    pub fn from_layers<R: Rng>(layers: Option<&[u32]>, rng: &mut R) -> NEIndividual<T> {
         NEIndividual{
             genes: Vec::new(),
             fitness: std::f32::NAN,
+            network: match layers {
+                Some(x) => Some(MultilayeredNetwork::from_layers(x, rng)),
+                None => None,
+            }
+        }
+    }
+
+    pub fn get_network(&self) -> Option<&T> {
+        Rc::new(&self.network.unwrap())
+    }
+}
+
+impl<T: NeuralNetwork> Individual for NEIndividual<T> where T: std::clone::Clone {
+    fn new() -> NEIndividual<T> {
+        NEIndividual{
+            genes: Vec::new(),
+            fitness: std::f32::NAN,
+            network: None,
         }
     }
 
@@ -46,13 +66,15 @@ impl Individual for NEIndividual {
     }
 }
 
+//================================================================================
+
 struct NE<'a, P: Problem + 'a, T: Individual> {
     ctx: Option<EAContext<T>>,
     problem: &'a P,
 }
 
 impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
-    pub fn new(settings: EASettings, problem: &'a P) -> NE<'a, P, T> {
+    pub fn new(problem: &'a P) -> NE<'a, P, T> {
         NE {problem: problem,
            ctx: None,
         }
@@ -92,6 +114,6 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(settings, &problem);
+        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
     }
 }

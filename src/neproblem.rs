@@ -8,7 +8,7 @@ use problem::*;
 /// Baseline class for optimization problems evolving neural networks.
 ///
 pub trait NeuroProblem: Problem{
-    fn compute(&self, nn: &mut NeuralNetwork) -> f32;
+    fn compute<T: NeuralNetwork>(&self, nn: &mut T) -> f32;
     fn get_inputs_count(&self) -> usize;
     fn get_outputs_count(&self) -> usize;
 }
@@ -77,7 +77,7 @@ impl NeuroProblem for SymbolicRegressionProblem {
     fn get_inputs_count(&self) -> usize {1}
     fn get_outputs_count(&self) -> usize {1}
 
-    fn compute(&self, nn: &mut NeuralNetwork) -> f32 {
+    fn compute<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
         const PTS_COUNT: u32 = 20;
 
         let mut er = 0f32;
