@@ -20,19 +20,27 @@ struct NEIndividual<T: NeuralNetwork> {
 }
 
 impl<T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
-    pub fn from_layers<R: Rng>(layers: Option<&[u32]>, rng: &mut R) -> NEIndividual<T> {
-        NEIndividual{
-            genes: Vec::new(),
-            fitness: std::f32::NAN,
-            network: match layers {
-                Some(x) => Some(MultilayeredNetwork::from_layers(x, rng)),
-                None => None,
-            }
-        }
-    }
+    // pub fn from_layers<R: Rng, A: ActivationFunction>(layers: &[u32], rng: &mut R) -> NEIndividual<T> {
+    //     let mut net: MultilayeredNetwork<NeuralLayer<A>> = MultilayeredNetwork::new(layers[0] as usize, layers[layers.len()-1] as usize);
+    //     for k in 1..(layers.len()-1) {
+    //         net.add_hidden_layer::<A>(layers[k] as usize);
+    //     }
+    //     net.add_hidden_layer::<LinearActivation>(layers[layers.len()-1] as usize);
+    //     net.build(&mut rng);
+
+    //     NEIndividual{
+    //         genes: Vec::new(),
+    //         fitness: std::f32::NAN,
+    //         network: Some(net)
+    //     }
+    // }
 
     pub fn get_network(&self) -> Option<&T> {
-        Rc::new(&self.network.unwrap())
+        // Rc::new(&self.network.unwrap())
+        match self.network {
+            Some(x) => Some(&x),
+            None => None
+        }
     }
 }
 

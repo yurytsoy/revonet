@@ -6,6 +6,9 @@ use math::*;
 // Should it be just named vector-function as this is what it really is?
 pub trait NeuralNetwork: Sized {
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
+    fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
+        self.compute(xs)
+    }
 }
 
 #[derive(Debug)]
@@ -13,7 +16,7 @@ pub trait NeuralNetwork: Sized {
 pub struct MultilayeredNetwork {
     inputs_num: usize,
     outputs_num: usize,
-    layers: Vec<Box<Layer>>,
+    layers: Vec<Box<NeuralLayer>>,
     is_built: bool,
 }
 
@@ -28,12 +31,12 @@ impl MultilayeredNetwork {
         }
     }
 
-    pub fn from_layers<T: ActivationFunction, R: Rng+Sized>(layers: &[u32], rng: &mut R) -> MultilayeredNetwork {
+    pub fn from_layers<R: Rng+Sized>(layers: &[u32], acts: &[ActivationFunctionType], rng: &mut R) -> MultilayeredNetwork {
         assert!(layers.len() >= 2);
 
         let mut res = MultilayeredNetwork::new(layers[0] as usize, layers[layers.len()-1] as usize);
         for k in 1..(layers.len()-1) {
-            res.add_hidden_layer::<T>(layers[k] as usize);
+            res.add_hidden_layer(layers[k] as usize, acts[k]);
         }
         res.build(rng);
         res
@@ -43,11 +46,11 @@ impl MultilayeredNetwork {
         self.layers.len()
     }
 
-    pub fn add_hidden_layer<T: ActivationFunction + 'static>(&mut self, size: usize) -> &mut Self {
+    pub fn add_hidden_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
         if self.is_built {
             panic!("Can not add layer to already built network.");
         }
-        self.layers.push(Box::new(NeuralLayer::<T>::new(size)));
+        self.layers.push(Box::new(NeuralLayer::new(size, actf)));
         self
     }
 
@@ -57,7 +60,7 @@ impl MultilayeredNetwork {
         }
 
         // add output layer.
-        self.layers.push(Box::new(NeuralLayer::<LinearActivation>::new(self.outputs_num)));
+        self.layers.push(Box::new(NeuralLayer::new(self.outputs_num, ActivationFunctionType::Linear)));
 
         // init weights and biases for all layers.
         let mut inputs = self.inputs_num;
@@ -108,40 +111,37 @@ impl NeuralNetwork for MultilayeredNetwork {
 
 //========================================
 
-trait Layer: Debug {
-    fn init_weights<R: Rng+Sized>(&mut self, inputs_num: usize, rng: &mut R);
-    fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
-    fn len(&self) -> usize;
-    fn get_weights(&self) -> (Vec<f32>, Vec<f32>);
-    fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>);
-}
+// pub trait Layer: Debug {
+//     fn init_weights<R: Rng+Sized>(&mut self, inputs_num: usize, rng: &mut R);
+//     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
+//     fn len(&self) -> usize;
+//     fn get_weights(&self) -> (Vec<f32>, Vec<f32>);
+//     fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>);
+// }
 
 #[derive(Debug)]
 #[allow(dead_code)]
-struct NeuralLayer<T: ActivationFunction> {
+pub struct NeuralLayer {
     size: usize,
     weights: Vec<Vec<f32>>,
     biases: Vec<f32>,
     outputs: Vec<f32>,
-    activations: Vec<T>,
+    activations: Vec<ActivationFunctionType>,
 }
 
 #[allow(dead_code)]
-impl<T: ActivationFunction> NeuralLayer<T> {
-    pub fn new(size: usize) -> NeuralLayer<T> {
+impl NeuralLayer {
+    pub fn new(size: usize, actf: ActivationFunctionType) -> NeuralLayer {
         NeuralLayer{
             size: size,
             weights: Vec::new(),
             biases: Vec::new(),
             outputs: Vec::new(),
-            activations: (0..size).map(|_| T::new()).collect::<Vec<T>>()
+            activations: (0..size).map(|_| actf).collect::<Vec<ActivationFunctionType>>()
         }
     }
-}
 
-#[allow(dead_code)]
-impl<T: ActivationFunction> Layer for NeuralLayer<T> {
-    fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
+    pub fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
         // println!("Init weights: {} nodes, {} inputs", self.size, inputs_num);
         for _ in 0..self.size {
             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
@@ -149,7 +149,7 @@ impl<T: ActivationFunction> Layer for NeuralLayer<T> {
         self.biases = rand_vector_std_gauss(self.size, rng);
     }
     
-    fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
+    pub fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
         self.outputs = dot_mv(&self.weights, &xs);
         self.outputs = (0..self.outputs.len())
                             .map(|k| self.activations[k].compute(self.outputs[k] + self.biases[k]))
@@ -157,9 +157,9 @@ impl<T: ActivationFunction> Layer for NeuralLayer<T> {
         self.outputs.clone()
     }
 
-    fn len(&self) -> usize {self.size}
+    pub fn len(&self) -> usize {self.size}
 
-    fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
+    pub fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
         let mut res_w = Vec::new();
         let mut res_b = Vec::with_capacity(self.size);
         
@@ -170,7 +170,7 @@ impl<T: ActivationFunction> Layer for NeuralLayer<T> {
         (res_w, res_b)
     }
 
-    fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>) {
+    pub fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>) {
         let inputs = self.weights[0].len();
         for k in 0..self.size {
             self.weights[k] = Vec::from(&ws[k*inputs..(k+1)*inputs]);
@@ -179,8 +179,55 @@ impl<T: ActivationFunction> Layer for NeuralLayer<T> {
     }
 }
 
+// #[allow(dead_code)]
+// impl<T: ActivationFunction> Layer for NeuralLayer<T> {
+//     fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
+//         // println!("Init weights: {} nodes, {} inputs", self.size, inputs_num);
+//         for _ in 0..self.size {
+//             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
+//         }
+//         self.biases = rand_vector_std_gauss(self.size, rng);
+//     }
+    
+//     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
+//         self.outputs = dot_mv(&self.weights, &xs);
+//         self.outputs = (0..self.outputs.len())
+//                             .map(|k| self.activations[k].compute(self.outputs[k] + self.biases[k]))
+//                             .collect::<Vec<f32>>();
+//         self.outputs.clone()
+//     }
+
+//     fn len(&self) -> usize {self.size}
+
+//     fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
+//         let mut res_w = Vec::new();
+//         let mut res_b = Vec::with_capacity(self.size);
+        
+//         for k in 0..self.size {
+//             res_w.extend(self.weights[k].clone());
+//             res_b.push(self.biases[k]);
+//         }
+//         (res_w, res_b)
+//     }
+
+//     fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>) {
+//         let inputs = self.weights[0].len();
+//         for k in 0..self.size {
+//             self.weights[k] = Vec::from(&ws[k*inputs..(k+1)*inputs]);
+//             self.biases[k] = bs[k];
+//         }
+//     }
+// }
+
 
 //========================================
+
+#[derive(Debug, Clone)]
+pub enum ActivationFunctionType {
+    Linear,
+    Sigmoid,
+    Relu,
+}
 
 pub trait ActivationFunction: Debug {
     fn compute(&self, x: f32) -> f32;
