@@ -126,7 +126,8 @@ pub struct NeuralLayer {
     weights: Vec<Vec<f32>>,
     biases: Vec<f32>,
     outputs: Vec<f32>,
-    activations: Vec<ActivationFunctionType>,
+    activation: ActivationFunctionType,
+    // activations: Vec<ActivationFunctionType>,
 }
 
 #[allow(dead_code)]
@@ -137,7 +138,8 @@ impl NeuralLayer {
             weights: Vec::new(),
             biases: Vec::new(),
             outputs: Vec::new(),
-            activations: (0..size).map(|_| actf).collect::<Vec<ActivationFunctionType>>()
+            activation: actf
+            // activations: (0..size).map(|_| actf).collect::<Vec<ActivationFunctionType>>()
         }
     }
 
@@ -231,6 +233,7 @@ pub enum ActivationFunctionType {
 
 pub trait ActivationFunction: Debug {
     fn compute(&self, x: f32) -> f32;
+    fn compute_static(x: f32) -> f32;
     fn new() -> Self;
 }
 
@@ -239,6 +242,7 @@ pub struct LinearActivation;
 impl ActivationFunction for LinearActivation {
     fn new() -> LinearActivation {LinearActivation{}}
     fn compute(&self, x: f32) -> f32 {x}
+    fn compute_static(x: f32) -> f32 {x}
 }
 
 #[derive(Debug)]
@@ -246,17 +250,37 @@ pub struct SigmoidActivation;
 impl ActivationFunction for SigmoidActivation {
     fn new() -> SigmoidActivation {SigmoidActivation{}}
     fn compute(&self, x: f32) -> f32 {
+        SigmoidActivation::compute_static(x)
+    }
+    fn compute_static(x: f32) -> f32 {
         1f32 / (1f32 + (-x).exp())
     }
 }
 
 #[derive(Debug)]
 pub struct ReluActivation;
+
 impl ActivationFunction for ReluActivation {
     fn new() -> ReluActivation {ReluActivation{}}
     fn compute(&self, x: f32) -> f32 {
+        ReluActivation::compute_static(x)
+    }
+    fn compute_static(x: f32) -> f32 {
         if x > 0f32 {x} else {0f32}
     }
+}
+
+pub fn compute_activations_inplace(xs: &mut [f32], actf: ActivationFunctionType) {
+    match actf {
+        ActivationFunctionType::Linear => {return;},
+        ActivationFunctionType::Relu => {
+            xs.iter_mut().map(|&mut x| x = ReluActivation::compute_static(x));
+        },
+        ActivationFunctionType::Sigmoid => {
+            xs.iter_mut().map(|&mut x| x = SigmoidActivation::compute_static(x));
+        },
+    }
+
 }
 
 //========================================
