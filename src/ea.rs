@@ -10,9 +10,10 @@ use problem::*;
 use result::*;
 use settings::*;
 
-pub trait Individual: Clone{
+pub trait Individual{
     fn new() -> Self;
     fn init<R: Rng>(&mut self, size: usize, &mut R);
+    fn clone(&self) -> Self;
     fn get_fitness(&self) -> f32;
     fn set_fitness(&mut self, fitness: f32);
     fn get_genes(&self) -> &[f32];
@@ -35,6 +36,10 @@ impl Individual for RealCodedIndividual{
 
     fn init<R: Rng>(&mut self, size: usize, mut rng: &mut R) {
         self.genes = rand_vector_std_gauss(size as usize, rng);
+    }
+
+    fn clone(&self) -> Self {
+        RealCodedIndividual{genes: self.genes.clone(), fitness: self.fitness}
     }
 
     fn get_fitness(&self) -> f32 {
@@ -119,7 +124,11 @@ pub trait EA<'a, T: Individual> {
     }
 
     fn next_generation(&self, ctx: &mut EAContext<T>, children: &Vec<T>) {
-        ctx.population.clone_from(children);
+        ctx.population = Vec::with_capacity(children.len());
+        for k in 0..children.len() {
+            ctx.population.push(children[k].clone());
+        }
+        // ctx.population = children.iter().map(|ref c| c.clone()).collect::<Vec<T>>();
         ctx.population.truncate(ctx.settings.pop_size as usize);
     }
 

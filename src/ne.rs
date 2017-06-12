@@ -1,5 +1,6 @@
 use rand::{Rng};
 use std;
+use std::iter::FromIterator;
 use std::rc::*;
 
 use context::*;
@@ -12,16 +13,15 @@ use problem::*;
 use result::*;
 use settings::*;
 
-#[derive(Clone)]
-struct NEIndividual<T: NeuralNetwork> {
+// #[derive(Clone)]
+struct NEIndividual {
     genes: Vec<f32>,
     fitness: f32,
-    network: Option<T>,
+    network: Option<MultilayeredNetwork>,
 }
 
-impl<'a, T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
-    pub fn get_network(&'a self) -> Option<&'a T> {
-        // Rc::new(&self.network.unwrap())
+impl<'a> NEIndividual {
+    pub fn get_network(&'a self) -> Option<&'a MultilayeredNetwork> {
         match &self.network {
             &Some(ref x) => Some(x),
             &None => None
@@ -29,8 +29,8 @@ impl<'a, T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
     }
 }
 
-impl<'a, T: NeuralNetwork> Individual for NEIndividual<T> where T: std::clone::Clone {
-    fn new() -> NEIndividual<T> {
+impl<'a> Individual for NEIndividual {
+    fn new() -> NEIndividual {
         NEIndividual{
             genes: Vec::new(),
             fitness: std::f32::NAN,
@@ -40,6 +40,17 @@ impl<'a, T: NeuralNetwork> Individual for NEIndividual<T> where T: std::clone::C
 
     fn init<R: Rng>(&mut self, size: usize, mut rng: &mut R) {
         self.genes = rand_vector_std_gauss(size as usize, rng);
+    }
+
+    fn clone(&self) -> Self {
+        NEIndividual{
+            genes: self.genes.clone(),
+            fitness: self.fitness,
+            network: match &self.network {
+                &Some(ref x) => Some(x.clone()),
+                &None => None
+            }
+        }
     }
 
     fn get_fitness(&self) -> f32 {
@@ -107,6 +118,7 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        // let ne: NE<SymbolicRegressionProblem, NEIndividual<NeuralNetwork>> = NE::new(&problem);
+        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+        // let ne = NE::new(&problem);
     }
 }

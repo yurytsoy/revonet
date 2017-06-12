@@ -1,10 +1,11 @@
+use rand;
 use rand::{Rng, ThreadRng};
 use std::fmt::Debug;
 
 use math::*;
 
 // Should it be just named vector-function as this is what it really is?
-pub trait NeuralNetwork: Sized {
+pub trait NeuralNetwork : Clone {
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
     fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
         self.compute(xs)
@@ -106,6 +107,19 @@ impl NeuralNetwork for MultilayeredNetwork {
             input = l.compute(&input);
         }
         Vec::from(input)
+    }
+}
+
+impl Clone for MultilayeredNetwork {
+    fn clone(&self) -> Self {
+        let mut res = MultilayeredNetwork::new(self.inputs_num, self.outputs_num);
+        for k in 0..self.layers.len()-1 {
+            res.add_hidden_layer(self.layers[k].size, self.layers[k].activation);
+        }
+        res.build(&mut rand::thread_rng());
+        let (wss, bss) = self.get_weights(); 
+        res.set_weights(&wss, &bss);
+        res
     }
 }
 
@@ -222,14 +236,8 @@ pub fn compute_activations_inplace(xs: &mut [f32], actf: ActivationFunctionType)
     let actf_ptr: fn(f32) -> f32;
     match actf {
         ActivationFunctionType::Linear => {return;},
-        ActivationFunctionType::Relu => {
-            actf_ptr = ReluActivation::compute_static;
-            // xs.iter_mut().map(|&mut x| x = ReluActivation::compute_static(x));
-        },
-        ActivationFunctionType::Sigmoid => {
-            actf_ptr = SigmoidActivation::compute_static;
-            // xs.iter_mut().map(|&mut x| x = SigmoidActivation::compute_static(x));
-        },
+        ActivationFunctionType::Relu => {actf_ptr = ReluActivation::compute_static;},
+        ActivationFunctionType::Sigmoid => {actf_ptr = SigmoidActivation::compute_static;},
     };
     for k in 0..xs.len() {
         xs[k] = (actf_ptr)(xs[k]);
@@ -274,8 +282,10 @@ mod test {
 
         let mut rng = rand::thread_rng();
         let mut net_linear: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-        net_linear.add_hidden_layer(30 as usize, ActivationFunctionType::Linear).build(&mut rng);
+        net_linear.add_hidden_layer(30 as usize, ActivationFunctionType::Linear)
+                  .build(&mut rng);
 
+        // outputs are not zeroes due to random biases.
         let net_out = net_linear.compute(&[0f32; INPUT_SIZE]);
         assert!(net_out.iter().all(|&x| x != 0f32));
         let net_out = net_linear.compute(&rand_vector_std_gauss(INPUT_SIZE, &mut rng));
