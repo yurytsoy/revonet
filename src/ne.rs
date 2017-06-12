@@ -19,32 +19,17 @@ struct NEIndividual<T: NeuralNetwork> {
     network: Option<T>,
 }
 
-impl<T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
-    // pub fn from_layers<R: Rng, A: ActivationFunction>(layers: &[u32], rng: &mut R) -> NEIndividual<T> {
-    //     let mut net: MultilayeredNetwork<NeuralLayer<A>> = MultilayeredNetwork::new(layers[0] as usize, layers[layers.len()-1] as usize);
-    //     for k in 1..(layers.len()-1) {
-    //         net.add_hidden_layer::<A>(layers[k] as usize);
-    //     }
-    //     net.add_hidden_layer::<LinearActivation>(layers[layers.len()-1] as usize);
-    //     net.build(&mut rng);
-
-    //     NEIndividual{
-    //         genes: Vec::new(),
-    //         fitness: std::f32::NAN,
-    //         network: Some(net)
-    //     }
-    // }
-
-    pub fn get_network(&self) -> Option<&T> {
+impl<'a, T: NeuralNetwork> NEIndividual<T> where T: std::clone::Clone {
+    pub fn get_network(&'a self) -> Option<&'a T> {
         // Rc::new(&self.network.unwrap())
-        match self.network {
-            Some(x) => Some(&x),
-            None => None
+        match &self.network {
+            &Some(ref x) => Some(x),
+            &None => None
         }
     }
 }
 
-impl<T: NeuralNetwork> Individual for NEIndividual<T> where T: std::clone::Clone {
+impl<'a, T: NeuralNetwork> Individual for NEIndividual<T> where T: std::clone::Clone {
     fn new() -> NEIndividual<T> {
         NEIndividual{
             genes: Vec::new(),
@@ -122,6 +107,6 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+        // let ne: NE<SymbolicRegressionProblem, NEIndividual<NeuralNetwork>> = NE::new(&problem);
     }
 }

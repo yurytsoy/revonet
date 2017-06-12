@@ -1,6 +1,6 @@
 [package]
 name = "revonet"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Yury Tsoy <yurytsoy@gmail.com>"]
 license = "GPL-3.0"
 

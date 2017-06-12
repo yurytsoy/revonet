@@ -111,14 +111,6 @@ impl NeuralNetwork for MultilayeredNetwork {
 
 //========================================
 
-// pub trait Layer: Debug {
-//     fn init_weights<R: Rng+Sized>(&mut self, inputs_num: usize, rng: &mut R);
-//     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
-//     fn len(&self) -> usize;
-//     fn get_weights(&self) -> (Vec<f32>, Vec<f32>);
-//     fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>);
-// }
-
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct NeuralLayer {
@@ -127,7 +119,6 @@ pub struct NeuralLayer {
     biases: Vec<f32>,
     outputs: Vec<f32>,
     activation: ActivationFunctionType,
-    // activations: Vec<ActivationFunctionType>,
 }
 
 #[allow(dead_code)]
@@ -139,12 +130,10 @@ impl NeuralLayer {
             biases: Vec::new(),
             outputs: Vec::new(),
             activation: actf
-            // activations: (0..size).map(|_| actf).collect::<Vec<ActivationFunctionType>>()
         }
     }
 
     pub fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
-        // println!("Init weights: {} nodes, {} inputs", self.size, inputs_num);
         for _ in 0..self.size {
             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
         }
@@ -152,10 +141,10 @@ impl NeuralLayer {
     }
     
     pub fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
-        self.outputs = dot_mv(&self.weights, &xs);
-        self.outputs = (0..self.outputs.len())
-                            .map(|k| self.activations[k].compute(self.outputs[k] + self.biases[k]))
+        self.outputs = dot_mv(&self.weights, &xs).iter().zip(self.biases.iter())
+                            .map(|(&w, &b)| w+b)
                             .collect::<Vec<f32>>();
+        compute_activations_inplace(&mut self.outputs, self.activation);
         self.outputs.clone()
     }
 
@@ -181,50 +170,9 @@ impl NeuralLayer {
     }
 }
 
-// #[allow(dead_code)]
-// impl<T: ActivationFunction> Layer for NeuralLayer<T> {
-//     fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
-//         // println!("Init weights: {} nodes, {} inputs", self.size, inputs_num);
-//         for _ in 0..self.size {
-//             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
-//         }
-//         self.biases = rand_vector_std_gauss(self.size, rng);
-//     }
-    
-//     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
-//         self.outputs = dot_mv(&self.weights, &xs);
-//         self.outputs = (0..self.outputs.len())
-//                             .map(|k| self.activations[k].compute(self.outputs[k] + self.biases[k]))
-//                             .collect::<Vec<f32>>();
-//         self.outputs.clone()
-//     }
-
-//     fn len(&self) -> usize {self.size}
-
-//     fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
-//         let mut res_w = Vec::new();
-//         let mut res_b = Vec::with_capacity(self.size);
-        
-//         for k in 0..self.size {
-//             res_w.extend(self.weights[k].clone());
-//             res_b.push(self.biases[k]);
-//         }
-//         (res_w, res_b)
-//     }
-
-//     fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>) {
-//         let inputs = self.weights[0].len();
-//         for k in 0..self.size {
-//             self.weights[k] = Vec::from(&ws[k*inputs..(k+1)*inputs]);
-//             self.biases[k] = bs[k];
-//         }
-//     }
-// }
-
-
 //========================================
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ActivationFunctionType {
     Linear,
     Sigmoid,
@@ -271,16 +219,21 @@ impl ActivationFunction for ReluActivation {
 }
 
 pub fn compute_activations_inplace(xs: &mut [f32], actf: ActivationFunctionType) {
+    let actf_ptr: fn(f32) -> f32;
     match actf {
         ActivationFunctionType::Linear => {return;},
         ActivationFunctionType::Relu => {
-            xs.iter_mut().map(|&mut x| x = ReluActivation::compute_static(x));
+            actf_ptr = ReluActivation::compute_static;
+            // xs.iter_mut().map(|&mut x| x = ReluActivation::compute_static(x));
         },
         ActivationFunctionType::Sigmoid => {
-            xs.iter_mut().map(|&mut x| x = SigmoidActivation::compute_static(x));
+            actf_ptr = SigmoidActivation::compute_static;
+            // xs.iter_mut().map(|&mut x| x = SigmoidActivation::compute_static(x));
         },
+    };
+    for k in 0..xs.len() {
+        xs[k] = (actf_ptr)(xs[k]);
     }
-
 }
 
 //========================================
@@ -321,7 +274,7 @@ mod test {
 
         let mut rng = rand::thread_rng();
         let mut net_linear: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-        net_linear.add_hidden_layer::<LinearActivation>(30 as usize).build(&mut rng);
+        net_linear.add_hidden_layer(30 as usize, ActivationFunctionType::Linear).build(&mut rng);
 
         let net_out = net_linear.compute(&[0f32; INPUT_SIZE]);
         assert!(net_out.iter().all(|&x| x != 0f32));
@@ -350,16 +303,16 @@ mod test {
 
         let mut rng = rand::thread_rng();
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-        net.add_hidden_layer::<SigmoidActivation>(30 as usize)
-            .add_hidden_layer::<LinearActivation>(15 as usize)
-            .add_hidden_layer::<SigmoidActivation>(300 as usize)
+        net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
+            .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
+            .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
             .build(&mut rng);
 
         // net2 has the same structure and weights as net1.
         let mut net2: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-        net2.add_hidden_layer::<SigmoidActivation>(30 as usize)
-            .add_hidden_layer::<LinearActivation>(15 as usize)
-            .add_hidden_layer::<SigmoidActivation>(300 as usize)
+        net2.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
+            .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
+            .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
             .build(&mut rng);
         let (ws, bs) = net.get_weights();
         net2.set_weights(&ws, &bs);
