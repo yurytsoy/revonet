@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use context::*;
 use math::*;
+use neuro::{NeuralNetwork};
 use problem::*;
 use result::*;
 use settings::*;
@@ -16,8 +17,10 @@ pub trait Individual{
     fn clone(&self) -> Self;
     fn get_fitness(&self) -> f32;
     fn set_fitness(&mut self, fitness: f32);
-    fn get_genes(&self) -> &[f32];
-    fn get_genes_mut(&mut self) -> &mut Vec<f32>;
+    fn to_vec(&self) -> Option<&[f32]>;
+    fn to_vec_mut(&mut self) -> Option<&mut Vec<f32>>;
+    fn to_net<T: NeuralNetwork>(&mut self) -> Option<&T> {None}
+    fn to_net_mut<T: NeuralNetwork>(&mut self) -> Option<&mut T> {None}
 }
 
 #[derive(Debug, Clone)]
@@ -50,12 +53,12 @@ impl Individual for RealCodedIndividual{
         self.fitness = fitness;
     }
 
-    fn get_genes(&self) -> &[f32] {
-        &self.genes
+    fn to_vec(&self) -> Option<&[f32]> {
+        Some(&self.genes)
     }
 
-    fn get_genes_mut(&mut self) -> &mut Vec<f32> {
-        &mut self.genes
+    fn to_vec_mut(&mut self) -> Option<&mut Vec<f32>> {
+        Some(&mut self.genes)
     }
 }
 
@@ -90,7 +93,7 @@ pub trait EA<'a, T: Individual> {
         let popul = &mut ctx.population;
 
         ctx.fitness = popul.iter_mut().map(|ref mut ind| {
-                let f = problem.compute_from_ind(ind as &mut T);
+                let f = problem.compute(ind as &mut T);
                 ind.set_fitness(f);
                 f
             }).collect::<Vec<f32>>();

@@ -14,12 +14,13 @@ use result::*;
 use settings::*;
 
 // #[derive(Clone)]
-struct NEIndividual {
+pub struct NEIndividual {
     genes: Vec<f32>,
     fitness: f32,
     network: Option<MultilayeredNetwork>,
 }
 
+#[allow(dead_code)]
 impl<'a> NEIndividual {
     pub fn get_network(&'a self) -> Option<&'a MultilayeredNetwork> {
         match &self.network {
@@ -61,12 +62,12 @@ impl<'a> Individual for NEIndividual {
         self.fitness = fitness;
     }
 
-    fn get_genes(&self) -> &[f32] {
-        &self.genes
+    fn to_vec(&self) -> Option<&[f32]> {
+        Some(&self.genes)
     }
 
-    fn get_genes_mut(&mut self) -> &mut Vec<f32> {
-        &mut self.genes
+    fn to_vec_mut(&mut self) -> Option<&mut Vec<f32>> {
+        Some(&mut self.genes)
     }
 }
 
@@ -77,6 +78,7 @@ struct NE<'a, P: Problem + 'a, T: Individual> {
     problem: &'a P,
 }
 
+#[allow(dead_code)]
 impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
     pub fn new(problem: &'a P) -> NE<'a, P, T> {
         NE {problem: problem,
@@ -118,7 +120,8 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        let ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+        let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+        ne.run(settings);
         // let ne = NE::new(&problem);
     }
 }

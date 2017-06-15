@@ -76,13 +76,13 @@ pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, child
 }
 
 fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut Rng) {
-    let p1_genes = p1.get_genes();
-    let p2_genes = p2.get_genes();
+    let p1_genes = p1.to_vec().unwrap();
+    let p2_genes = p2.to_vec().unwrap();
     assert!(p1_genes.len() == p2_genes.len());
 
     let gene_count = p1_genes.len();
-    let c1_genes = c1.get_genes_mut();
-    let c2_genes = c2.get_genes_mut();
+    let c1_genes = c1.to_vec_mut().unwrap();
+    let c2_genes = c2.to_vec_mut().unwrap();
 
     for k in 0..gene_count {
         let (min_gene, max_gene) = if p1_genes[k] > p2_genes[k] {(p2_genes[k], p1_genes[k])}
@@ -107,7 +107,7 @@ pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, rng: 
 
 fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, rng: &mut R) {
     let normal_rng = Normal::new(0.0, 0.1);
-    let genes = ind.get_genes_mut();
+    let genes = ind.to_vec_mut().unwrap();
     for k in 0..genes.len() {
         if rand::random::<f32>() < prob {
             genes[k] += normal_rng.ind_sample(rng) as f32;

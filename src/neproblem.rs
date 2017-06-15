@@ -1,23 +1,31 @@
 use rand::{Rng, StdRng, SeedableRng};
+use std;
 
 use ea::*;
-use neuro::{NeuralNetwork};
+use ne::NEIndividual;
+use neuro::{MultilayeredNetwork, NeuralNetwork};
 use problem::*;
 
-///
-/// Baseline class for optimization problems evolving neural networks.
-///
-pub trait NeuroProblem: Problem{
-    fn compute<T: NeuralNetwork>(&self, nn: &mut T) -> f32;
+//--------------------------------------------
+
+pub trait NeuroProblem: Problem {
     fn get_inputs_count(&self) -> usize;
     fn get_outputs_count(&self) -> usize;
+
+    fn compute_with_net<T: NeuralNetwork>(&self, net: &mut T) -> f32;
 }
 
-// impl<T> Problem for T where T: NeuroProblem {
-//     fn compute(&self, )
-// }
-
-//--------------------------------------------
+impl<T: NeuroProblem> Problem for T {
+    fn compute<I: Individual>(&self, ind: &mut I) -> f32 {
+        let fitness;
+        {
+            let net: &mut MultilayeredNetwork = ind.to_net_mut().unwrap();
+            fitness = self.compute_with_net(net);
+        }
+        ind.set_fitness(fitness);
+        ind.get_fitness()
+    }
+}
 
 ///
 /// Problems which are typically used to test GP algorithms.
@@ -35,55 +43,56 @@ impl SymbolicRegressionProblem {
             'f' => SymbolicRegressionProblem::new_f(),
             'g' => SymbolicRegressionProblem::new_g(),
             'h' => SymbolicRegressionProblem::new_h(),
-            _ => panic!(format!("Unknown problem type for symbolic regression problem: {}", problem_type))
+            _ => {
+                panic!(format!("Unknown problem type for symbolic regression problem: {}",
+                               problem_type))
+            }
         }
     }
 
     pub fn new_f() -> SymbolicRegressionProblem {
-        SymbolicRegressionProblem{func: SymbolicRegressionProblem::f}
+        SymbolicRegressionProblem { func: SymbolicRegressionProblem::f }
     }
 
     pub fn new_g() -> SymbolicRegressionProblem {
-        SymbolicRegressionProblem{func: SymbolicRegressionProblem::g}
+        SymbolicRegressionProblem { func: SymbolicRegressionProblem::g }
     }
 
     pub fn new_h() -> SymbolicRegressionProblem {
-        SymbolicRegressionProblem{func: SymbolicRegressionProblem::h}
+        SymbolicRegressionProblem { func: SymbolicRegressionProblem::h }
     }
 
     fn f(&self, x: f32) -> f32 {
-        let x2 = x*x;
-        x2*x2 + x2*x + x2 + x
+        let x2 = x * x;
+        x2 * x2 + x2 * x + x2 + x
     }
 
     fn g(&self, x: f32) -> f32 {
-        let x2 = x*x;
-        x2*x2*x - 2f32*x2*x + x
+        let x2 = x * x;
+        x2 * x2 * x - 2f32 * x2 * x + x
     }
 
     fn h(&self, x: f32) -> f32 {
-        let x2 = x*x;
-        x2*x2*x2 - 2f32*x2*x2 + x2
-    }
-}
-
-impl Problem for SymbolicRegressionProblem {
-    fn compute_from_ind<T: Individual>(&self, ind: &T) -> f32 {
-       unimplemented!()
+        let x2 = x * x;
+        x2 * x2 * x2 - 2f32 * x2 * x2 + x2
     }
 }
 
 impl NeuroProblem for SymbolicRegressionProblem {
-    fn get_inputs_count(&self) -> usize {1}
-    fn get_outputs_count(&self) -> usize {1}
+    fn get_inputs_count(&self) -> usize {
+        1
+    }
+    fn get_outputs_count(&self) -> usize {
+        1
+    }
 
-    fn compute<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
+    fn compute_with_net<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
         const PTS_COUNT: u32 = 20;
 
         let mut er = 0f32;
         let mut input = vec![0f32];
         let mut output;
-        
+
         let mut rng: StdRng = StdRng::from_seed(&[0]);
         for _ in 0..PTS_COUNT {
             let x = rng.gen::<f32>(); // sample from [-1, 1]
