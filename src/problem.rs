@@ -1,16 +1,17 @@
+use rand::{Rng};
 use std;
 
 use ea::*;
-
-pub trait Bar{
-
-}
 
 pub trait Problem{
     fn is_solution(&self, value: f32) -> bool {
         value < 1e-3f32
     }
-
+    fn get_random_individual<T: Individual, R: Rng>(&self, size: usize, mut rng: &mut R) -> T {
+        let mut res_ind = T::new();
+        res_ind.init(size, rng);
+        res_ind
+    }
     fn compute<T: Individual>(&self, ind: &mut T) -> f32;
 }
 
@@ -58,5 +59,3 @@ impl Problem for RosenbrockProblem {
         res
     }
 }
-
-

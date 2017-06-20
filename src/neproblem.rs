@@ -1,9 +1,10 @@
+use rand;
 use rand::{Rng, StdRng, SeedableRng};
 use std;
 
 use ea::*;
 use ne::NEIndividual;
-use neuro::{MultilayeredNetwork, NeuralNetwork};
+use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};
 use problem::*;
 
 //--------------------------------------------
@@ -11,6 +12,7 @@ use problem::*;
 pub trait NeuroProblem: Problem {
     fn get_inputs_count(&self) -> usize;
     fn get_outputs_count(&self) -> usize;
+    fn get_default_net(&self) -> MultilayeredNetwork;
 
     fn compute_with_net<T: NeuralNetwork>(&self, net: &mut T) -> f32;
 }
@@ -84,6 +86,13 @@ impl NeuroProblem for SymbolicRegressionProblem {
     }
     fn get_outputs_count(&self) -> usize {
         1
+    }
+    fn get_default_net(&self) -> MultilayeredNetwork {
+        let mut rng = rand::thread_rng();
+        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
+        net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
+            .build(&mut rng);
+        net
     }
 
     fn compute_with_net<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {

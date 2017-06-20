@@ -1,6 +1,6 @@
 use rand::{Rng};
 use std;
-use std::iter::FromIterator;
+// use std::iter::FromIterator;
 use std::rc::*;
 
 use context::*;
@@ -30,7 +30,7 @@ impl<'a> NEIndividual {
     }
 }
 
-impl<'a> Individual for NEIndividual {
+impl Individual for NEIndividual {
     fn new() -> NEIndividual {
         NEIndividual{
             genes: Vec::new(),
@@ -69,6 +69,22 @@ impl<'a> Individual for NEIndividual {
     fn to_vec_mut(&mut self) -> Option<&mut Vec<f32>> {
         Some(&mut self.genes)
     }
+
+    fn to_net<'a>(&mut self) -> Option<&MultilayeredNetwork> {
+        match &self.network {
+            &Some(ref net) => Some(net),
+            &None => None
+        }
+    }
+    fn to_net_mut(&mut self) -> Option<&mut MultilayeredNetwork> {
+        match &mut self.network {
+            &mut Some(ref mut net) => Some(net),
+            &mut None => None
+        }
+    }
+    fn set_net(&mut self, net: MultilayeredNetwork) {
+        self.network = Some(net);
+    }
 }
 
 //================================================================================
@@ -88,7 +104,7 @@ impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
 
     pub fn run(&mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
         let gen_count = settings.gen_count;
-        let mut ctx = EAContext::new(settings);
+        let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
         Ok(Rc::new(&(&self.ctx.as_ref().unwrap()).result))

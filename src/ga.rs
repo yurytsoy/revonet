@@ -25,7 +25,7 @@ impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
 
     pub fn run(&'a mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
         let gen_count = settings.gen_count;
-        let mut ctx = EAContext::new(settings);
+        let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
         Ok(Rc::new(&(&self.ctx.as_ref().unwrap()).result))
@@ -114,4 +114,3 @@ fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, rng: &mut R) {
         }
     }
 }
-

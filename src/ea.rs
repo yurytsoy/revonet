@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use context::*;
 use math::*;
-use neuro::{NeuralNetwork};
+use neuro::{NeuralNetwork, MultilayeredNetwork};
 use problem::*;
 use result::*;
 use settings::*;
@@ -19,8 +19,9 @@ pub trait Individual{
     fn set_fitness(&mut self, fitness: f32);
     fn to_vec(&self) -> Option<&[f32]>;
     fn to_vec_mut(&mut self) -> Option<&mut Vec<f32>>;
-    fn to_net<T: NeuralNetwork>(&mut self) -> Option<&T> {None}
-    fn to_net_mut<T: NeuralNetwork>(&mut self) -> Option<&mut T> {None}
+    fn to_net(&mut self) -> Option<&MultilayeredNetwork> {None}
+    fn to_net_mut(&mut self) -> Option<&mut MultilayeredNetwork> {None}
+    fn set_net(&mut self, net: MultilayeredNetwork) {}
 }
 
 #[derive(Debug, Clone)]
@@ -67,18 +68,23 @@ impl Individual for RealCodedIndividual{
 pub trait EA<'a, T: Individual> {
     fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
         // let mut ctx = self.get_context_mut();
+        println!("run_with_context");
         for t in 0..gen_count {
             // evaluation
+            println!("evaluation");
             self.evaluate(ctx, problem);
 
             // selection
+            println!("selection");
             let sel_inds = self.select(ctx);
 
             // crossover
+            println!("crossover");
             let mut children: Vec<T> = Vec::with_capacity(ctx.settings.pop_size as usize);
             self.breed(ctx, &sel_inds,  &mut children);
 
             // next gen
+            println!("next_generation");
             self.next_generation(ctx, &children);
 
             println!("> {} : {:?}", t, ctx.fitness);
@@ -141,14 +147,13 @@ pub trait EA<'a, T: Individual> {
     // fn get_context_mut(&'a mut self) -> &'a mut EAContext<T>;
 }
 
-pub fn create_population<T: Individual>(pop_size: u32, ind_size: u32, mut rng: &mut Rng) -> Vec<T> {
-    (0..pop_size)
-        .map(|_| {
-            let mut res_ind = T::new();
-            res_ind.init(ind_size as usize, &mut rng);
-            res_ind
-        })
-        .collect::<Vec<T>>()
+pub fn create_population<T: Individual, P: Problem, R: Rng+Sized>(pop_size: u32, ind_size: u32, mut rng: &mut R, problem: &P) -> Vec<T> {
+    println!("Creating population of {} individuals having size {}", pop_size, ind_size);
+    let mut res = Vec::with_capacity(pop_size as usize);
+    for _ in 0..pop_size {
+        res.push(problem.get_random_individual::<T, R>(ind_size as usize, rng));
+    }
+    res
 }
 
 fn select_tournament(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<usize> {

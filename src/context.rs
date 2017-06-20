@@ -2,6 +2,7 @@ use rand::{Rng, SeedableRng, StdRng};
 
 use ea::*;
 use ga::*;
+use problem::*;
 use result::*;
 use settings::*;
 
@@ -18,9 +19,9 @@ pub struct EAContext<T: Individual> {
 }
 
 impl<T: Individual> EAContext<T> {
-    pub fn new(settings: EASettings) -> EAContext<T> {
+    pub fn new<P: Problem>(settings: EASettings, problem: &P) -> EAContext<T> {
         let mut rng: StdRng = StdRng::from_seed(&[settings.rng_seed as usize]);
-        EAContext{population: create_population(settings.pop_size, settings.param_count, &mut rng),
+        EAContext{population: create_population(settings.pop_size, settings.param_count, &mut rng, problem),
                   settings: settings,
                   result: EAResult::new(),
                   fitness: Vec::new(),
