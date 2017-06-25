@@ -28,6 +28,11 @@ impl<T: NeuroProblem> Problem for T {
         ind.set_fitness(fitness);
         ind.get_fitness()
     }
+    fn get_random_individual<U: Individual, R: Rng>(&self, size: usize, mut rng: &mut R) -> U {
+        let mut res_ind = U::new();
+        res_ind.set_net(self.get_default_net());
+        res_ind
+    }
 }
 
 ///
@@ -122,15 +127,18 @@ impl NeuroProblem for SymbolicRegressionProblem {
 #[test]
 fn test_symb_regression_problem() {
     for prob_type in vec!['f', 'g', 'h'] {
+        let mut rng = rand::thread_rng();
         let prob = SymbolicRegressionProblem::new(prob_type);
         println!("Created problem of type: {}", prob_type);
 
         let mut net = prob.get_default_net();
         println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_count(), net.get_outputs_count(), net.len()-1);
         println!("  Network weights: {:?}", net.get_weights());
+        let mut ind: NEIndividual = prob.get_random_individual(0, &mut rng);
+        println!("  Random individual: {:?}", ind.to_vec().unwrap());
+        println!("  Random individual ANN: {:?}", ind.to_net().unwrap());
 
         let input_size = net.get_inputs_count();
-        let mut rng = rand::thread_rng();
         let mut ys = Vec::with_capacity(100);
         for _ in 0..100 {
             let x = rand_vector_std_gauss(input_size, &mut rng);

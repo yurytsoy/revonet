@@ -1,6 +1,7 @@
 use rand;
 use rand::{Rng, ThreadRng};
 use std::fmt::Debug;
+use std::slice::Iter;
 
 use math::*;
 
@@ -99,6 +100,10 @@ impl MultilayeredNetwork {
         for k in 0..self.layers.len() {
             self.layers[k].set_weights(&wss[k], &bss[k]);
         }
+    }
+
+    pub fn iter_layers(&self) -> Iter<Box<NeuralLayer>> {
+        self.layers.iter()
     }
 }
 

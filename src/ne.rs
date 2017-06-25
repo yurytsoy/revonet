@@ -28,6 +28,33 @@ impl<'a> NEIndividual {
             &None => None
         }
     }
+
+    fn update_net(&mut self) {
+        match &mut self.network {
+            &mut Some(ref mut net) => {
+                // copy weights from genes to NN.
+                let (mut ws, mut bs) = (Vec::new(), Vec::new());
+                let mut inputs_num = net.get_inputs_count();
+                let mut cur_idx = 0;
+                // weights.
+                for layer in net.iter_layers() {
+                    // println!("getting slice for weights {}..{}", cur_idx, (cur_idx + inputs_num * layer.len()));
+                    ws.push(Vec::from(&self.genes[cur_idx..(cur_idx + inputs_num * layer.len())]));
+                    cur_idx += inputs_num * layer.len();
+                    inputs_num = layer.len();
+                }
+                // biases.
+                // cur_idx = 0;
+                for layer in net.iter_layers() {
+                    // println!("getting slice for biases {}..{}", cur_idx, (cur_idx + layer.len()));
+                    bs.push(Vec::from(&self.genes[cur_idx..(cur_idx + layer.len())]));
+                    cur_idx += layer.len();
+                }
+                net.set_weights(&ws, &bs);
+            },
+            &mut None => {}
+        }
+    }
 }
 
 impl Individual for NEIndividual {
@@ -70,20 +97,35 @@ impl Individual for NEIndividual {
         Some(&mut self.genes)
     }
 
-    fn to_net<'a>(&mut self) -> Option<&MultilayeredNetwork> {
+    fn to_net(&mut self) -> Option<&MultilayeredNetwork> {
+        self.update_net();
         match &self.network {
             &Some(ref net) => Some(net),
             &None => None
         }
     }
+
     fn to_net_mut(&mut self) -> Option<&mut MultilayeredNetwork> {
+        self.update_net();
         match &mut self.network {
-            &mut Some(ref mut net) => Some(net),
+            &mut Some(ref mut net) => {Some(net)},
             &mut None => None
         }
     }
+
     fn set_net(&mut self, net: MultilayeredNetwork) {
+        let (ws, bs) = net.get_weights();
         self.network = Some(net);
+        self.genes = ws.into_iter()
+                       .fold(Vec::new(), |mut res, w| {
+                           res.extend(w.iter().cloned());
+                           res
+                       });
+        self.genes.extend(bs.into_iter()
+                            .fold(Vec::new(), |mut res, b| {
+                                res.extend(b.iter().cloned());
+                                res
+                            }));
     }
 }
 
@@ -139,5 +181,33 @@ mod test {
         let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
         ne.run(settings);
         // let ne = NE::new(&problem);
+    }
+
+    #[test]
+    pub fn test_net_get_set() {
+        let mut rng = rand::thread_rng();
+        let mut net = MultilayeredNetwork::new(2, 2);
+        net.add_hidden_layer(10 as usize, ActivationFunctionType::Sigmoid)
+            .add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
+            .build(&mut rng);
+        let (ws1, bs1) = net.get_weights();
+
+        let mut ind = NEIndividual::new();
+        ind.set_net(net.clone());
+        let net2 = ind.to_net_mut().unwrap();
+        let (ws2, bs2) = net2.get_weights();
+
+        // compare ws1 & ws2 and bs1 & bs2. Should be equal.
+        for k in 0..ws1.len() {
+            let max_diff = max(&sub(&ws1[k], &ws2[k]));
+            println!("max diff: {}", max_diff);
+            assert!(max_diff == 0f32);
+
+            let max_diff = max(&sub(&bs1[k], &bs2[k]));
+            println!("bs1: {:?}", bs1[k]);
+            println!("bs2: {:?}", bs2[k]);
+            println!("max diff: {}", max_diff);
+            assert!(max_diff == 0f32);
+        }
     }
 }

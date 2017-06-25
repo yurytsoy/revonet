@@ -39,6 +39,12 @@ pub fn mean(xs: &Vec<f32>) -> f32 {
     }
 }
 
+pub fn sub(xs: &[f32], ys: &[f32]) -> Vec<f32> {
+    xs.iter().zip(ys.iter())
+        .map(|(&x, &y)| x-y)
+        .collect::<Vec<f32>>()
+}
+
 //=========================================================================
 
 #[cfg(test)]
