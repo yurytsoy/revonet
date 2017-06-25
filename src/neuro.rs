@@ -10,6 +10,8 @@ pub trait NeuralNetwork : Clone {
     fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
         self.compute(xs)
     }
+    fn get_inputs_count(&self) -> usize;
+    fn get_outputs_count(&self) -> usize;
 }
 
 #[derive(Debug)]
@@ -101,6 +103,12 @@ impl MultilayeredNetwork {
 }
 
 impl NeuralNetwork for MultilayeredNetwork {
+    fn get_inputs_count(&self) -> usize {
+        self.inputs_num
+    }
+    fn get_outputs_count(&self) -> usize {
+        self.outputs_num
+    }
     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
         let mut input = Vec::from(xs);
         for l in self.layers.iter_mut() {

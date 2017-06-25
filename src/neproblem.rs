@@ -3,6 +3,7 @@ use rand::{Rng, StdRng, SeedableRng};
 use std;
 
 use ea::*;
+use math::*;
 use ne::NEIndividual;
 use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};
 use problem::*;
@@ -113,5 +114,30 @@ impl NeuroProblem for SymbolicRegressionProblem {
             er += (output[0] - y).abs();
         }
         er
+    }
+}
+
+//=========================================================
+
+#[test]
+fn test_symb_regression_problem() {
+    for prob_type in vec!['f', 'g', 'h'] {
+        let prob = SymbolicRegressionProblem::new(prob_type);
+        println!("Created problem of type: {}", prob_type);
+
+        let mut net = prob.get_default_net();
+        println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_count(), net.get_outputs_count(), net.len()-1);
+        println!("  Network weights: {:?}", net.get_weights());
+
+        let input_size = net.get_inputs_count();
+        let mut rng = rand::thread_rng();
+        let mut ys = Vec::with_capacity(100);
+        for _ in 0..100 {
+            let x = rand_vector_std_gauss(input_size, &mut rng);
+            let y = net.compute(&x);
+            ys.push(y);
+        }
+        println!("  Network outputs for 100 random inputs: {:?}", ys);
+        println!("  Network evaluation: {:?}\n", prob.compute_with_net(&mut net));
     }
 }
