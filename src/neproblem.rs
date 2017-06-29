@@ -21,10 +21,11 @@ pub trait NeuroProblem: Problem {
 impl<T: NeuroProblem> Problem for T {
     fn compute<I: Individual>(&self, ind: &mut I) -> f32 {
         let fitness;
-        {
-            let net: &mut MultilayeredNetwork = ind.to_net_mut().unwrap();
-            fitness = self.compute_with_net(net);
-        }
+        fitness = self.compute_with_net(ind.to_net_mut().unwrap());
+        // match ind.to_net_mut() {
+        //     Some(ref mut net) => {fitness = self.compute_with_net(net);},
+        //     None => panic!("NN is not defined"),
+        // };
         ind.set_fitness(fitness);
         ind.get_fitness()
     }

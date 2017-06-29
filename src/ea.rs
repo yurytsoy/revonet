@@ -68,23 +68,23 @@ impl Individual for RealCodedIndividual{
 pub trait EA<'a, T: Individual> {
     fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
         // let mut ctx = self.get_context_mut();
-        println!("run_with_context");
+        // println!("run_with_context");
         for t in 0..gen_count {
             // evaluation
-            println!("evaluation");
+            // println!("evaluation");
             self.evaluate(ctx, problem);
 
             // selection
-            println!("selection");
+            // println!("selection");
             let sel_inds = self.select(ctx);
 
             // crossover
-            println!("crossover");
+            // println!("crossover");
             let mut children: Vec<T> = Vec::with_capacity(ctx.settings.pop_size as usize);
             self.breed(ctx, &sel_inds,  &mut children);
 
             // next gen
-            println!("next_generation");
+            // println!("next_generation");
             self.next_generation(ctx, &children);
 
             println!("> {} : {:?}", t, ctx.fitness);
@@ -100,6 +100,7 @@ pub trait EA<'a, T: Individual> {
 
         ctx.fitness = popul.iter_mut().map(|ref mut ind| {
                 let f = problem.compute(ind as &mut T);
+                // println!(".");
                 ind.set_fitness(f);
                 f
             }).collect::<Vec<f32>>();

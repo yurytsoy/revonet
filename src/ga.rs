@@ -60,16 +60,13 @@ pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, child
             p2 = range.ind_sample(rng);
         }
 
+        let mut c1 = popul[sel_inds[p1]].clone();   // T::new();
+        let mut c2 = popul[sel_inds[p2]].clone();   // T::new();
         if rand::random::<f32>() < x_prob {
-            let mut c1 = T::new();
-            let mut c2 = T::new();
             cross_blx_alpha(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha, rng);
-            children.push(c1);
-            children.push(c2);
-        } else {
-            children.push(popul[sel_inds[p1]].clone());
-            children.push(popul[sel_inds[p2]].clone());
         }
+        children.push(c1);
+        children.push(c2);
 
         if children.len() >= popul.len() {break;}
     }
@@ -78,6 +75,7 @@ pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, child
 fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut Rng) {
     let p1_genes = p1.to_vec().unwrap();
     let p2_genes = p2.to_vec().unwrap();
+    // println!("{} : {}", p1_genes.len(), p2_genes.len());
     assert!(p1_genes.len() == p2_genes.len());
 
     let gene_count = p1_genes.len();
@@ -90,13 +88,14 @@ fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha:
         if min_gene < max_gene {
             let delta = max_gene - min_gene;
             let gene_range = Range::new(min_gene - delta*alpha, max_gene + delta*alpha);
-            c1_genes.push(gene_range.ind_sample(&mut rng));
-            c2_genes.push(gene_range.ind_sample(&mut rng));
+            c1_genes[k] = gene_range.ind_sample(&mut rng);
+            c2_genes[k] = gene_range.ind_sample(&mut rng);
         } else {
-            c1_genes.push(min_gene);
-            c2_genes.push(min_gene);
+            c1_genes[k] = min_gene;
+            c2_genes[k] = min_gene;
         }
     };
+    // println!("children: {} : {}", c1_genes.len(), c2_genes.len());
 }
 
 pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, rng: &mut R) {

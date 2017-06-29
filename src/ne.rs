@@ -13,7 +13,7 @@ use problem::*;
 use result::*;
 use settings::*;
 
-// #[derive(Clone)]
+#[derive(Debug)]
 pub struct NEIndividual {
     genes: Vec<f32>,
     fitness: f32,
@@ -52,7 +52,9 @@ impl<'a> NEIndividual {
                 }
                 net.set_weights(&ws, &bs);
             },
-            &mut None => {}
+            &mut None => {
+                println!("[update_net] Warning: network is not defined");
+            }
         }
     }
 }
@@ -71,12 +73,16 @@ impl Individual for NEIndividual {
     }
 
     fn clone(&self) -> Self {
+        // println!("Cloning NE individual");
         NEIndividual{
             genes: self.genes.clone(),
             fitness: self.fitness,
             network: match &self.network {
                 &Some(ref x) => Some(x.clone()),
-                &None => None
+                &None => {
+                    println!("[clone] Warning: cloned individual has empty NN");
+                    None
+                }
             }
         }
     }
@@ -179,7 +185,8 @@ mod test {
         let problem = SymbolicRegressionProblem::new_f();
 
         let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
-        ne.run(settings);
+        let res = ne.run(settings).expect("Error: NE result is empty");
+        println!("result: {:?}", res);
         // let ne = NE::new(&problem);
     }
 
