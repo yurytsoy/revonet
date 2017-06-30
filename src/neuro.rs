@@ -339,6 +339,8 @@ mod test {
             .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
             .build(&mut rng);
         let (ws, bs) = net.get_weights();
+        println!("{:?}", net.get_weights());
+        assert!(ws.len() == 4);
         net2.set_weights(&ws, &bs);
 
         // net and net2 should produce identical outputs

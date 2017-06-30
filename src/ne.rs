@@ -187,6 +187,8 @@ mod test {
         let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
         let res = ne.run(settings).expect("Error: NE result is empty");
         println!("result: {:?}", res);
+        println!("\nbest individual: {:?}", res.best);
+        // println!("\nbest individual NN: {:?}", res.best.to_net());
         // let ne = NE::new(&problem);
     }
 
