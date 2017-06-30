@@ -1,5 +1,8 @@
 # revonet
+
 Rust implementation of real-coded genetic algorithm for solving optimization problems and training of neural networks. The latter is also known as neuroevolution.
+
+This is an exercise project to get the hang of Rust and possibly do something useful. As my knowledge of Rust is quite limited, the code is far from perfection and any advice is very appreciated.
 
 # Examples
 
@@ -22,7 +25,7 @@ println!("\n\nGA results: {:?}", res);
 ### Run evolution of NN weights to solve regression problem
 
 ```rust
-let (pop_size, gen_count, param_count) = (20, 20, 100); # gene_count does not matter here as NN structure is defined by a problem.
+let (pop_size, gen_count, param_count) = (20, 20, 100); // gene_count does not matter here as NN structure is defined by a problem.
 let settings = EASettings::new(pop_size, gen_count, param_count);
 let problem = SymbolicRegressionProblem::new_f();
 
