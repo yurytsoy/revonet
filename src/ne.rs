@@ -137,7 +137,7 @@ impl Individual for NEIndividual {
 
 //================================================================================
 
-struct NE<'a, P: Problem + 'a, T: Individual> {
+pub struct NE<'a, P: Problem + 'a, T: Individual> {
     ctx: Option<EAContext<T>>,
     problem: &'a P,
 }
