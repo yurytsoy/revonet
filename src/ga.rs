@@ -35,7 +35,7 @@ impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
 impl<'a, P: Problem, T: Individual> EA<'a, T> for GA<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_prob, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 
     // fn get_context_mut(&mut self) -> &'a mut EAContext<T> {
@@ -92,24 +92,105 @@ fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha:
             c2_genes[k] = gene_range.ind_sample(&mut rng);
         } else {
             c1_genes[k] = min_gene;
-            c2_genes[k] = min_gene;
+            c2_genes[k] = max_gene;
         }
     };
     // println!("children: {} : {}", c1_genes.len(), c2_genes.len());
 }
 
-pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, rng: &mut R) {
+pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, mut_sigma: f32, rng: &mut R) {
     for k in 1..children.len() {
-        mutate_gauss(&mut children[k], mut_prob, rng);
+        mutate_gauss(&mut children[k], mut_prob, mut_sigma, rng);
     }
 }
 
-fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, rng: &mut R) {
-    let normal_rng = Normal::new(0.0, 0.1);
+fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: &mut R) {
+    let normal_rng = Normal::new(0.0, sigma as f64);
     let genes = ind.to_vec_mut().unwrap();
     for k in 0..genes.len() {
         if rand::random::<f32>() < prob {
             genes[k] += normal_rng.ind_sample(rng) as f32;
+        }
+    }
+}
+
+//============================================
+
+#[cfg(test)]
+mod test {
+    use rand;
+    use rand::*;
+
+    use ea::*;
+    use ga::*;
+    use math::*;
+
+    #[test]
+    fn test_blx_xover() {
+        let mut rng = rand::thread_rng();
+
+        const SIZE: usize = 20;
+        let mut p1 = RealCodedIndividual::new();
+        p1.init(SIZE, &mut rng);
+        let mut p2 = RealCodedIndividual::new();
+        p2.init(SIZE, &mut rng);
+
+        let mut c1 = RealCodedIndividual::new();
+        c1.init(SIZE, &mut rng);
+        let mut c2 = RealCodedIndividual::new();
+        c2.init(SIZE, &mut rng);
+        cross_blx_alpha(&p1, &p2, &mut c1, &mut c2, 0.1f32, &mut rng);
+
+        let p1_genes = p1.to_vec().unwrap();
+        let p2_genes = p2.to_vec().unwrap();
+        let c1_genes = c1.to_vec().unwrap();
+        let c2_genes = c2.to_vec().unwrap();
+        for k in 0..SIZE {
+            assert!(c1_genes[k] != p1_genes[k]);
+            assert!(c1_genes[k] != p2_genes[k]);
+            assert!(c2_genes[k] != p1_genes[k]);
+            assert!(c2_genes[k] != p2_genes[k]);
+        }
+    }
+
+    #[test]
+    fn test_gauss_mutation() {
+        const SIZE: usize = 10;
+        const TRIALS: usize = 1000;
+
+        let sqrt_trials = (TRIALS as f32).sqrt();
+        let mut rng = rand::thread_rng();
+        let mut sigma = 0f32;
+        while sigma <= 0.5f32 {
+            let mut p1 = RealCodedIndividual::new();
+            p1.genes = vec![0f32; SIZE];
+            for k in 0..TRIALS {
+                mutate_gauss(&mut p1, 1f32, sigma, &mut rng);
+            }
+            // the resulting distribution should be gaussian with SD = sqrt(1000) * sigma
+            let max_dist = sqrt_trials * sigma;
+            let (max_val, min_val) = (max(&p1.genes), min(&p1.genes));
+            assert!(max_val <= 4f32 *max_dist);
+            assert!(min_val >= -4f32*max_dist);
+            assert!(max_val >= 4f32*sigma);
+            assert!(min_val <= -4f32*sigma);
+
+            sigma += 0.1f32;
+        }
+    }
+
+    #[test]
+    fn test_optimization_sphere() {
+        let pop_size = 20u32;
+        let problem_dim = 10u32;
+        let problem = SphereProblem{};
+
+        let gen_count = 10u32;
+        let settings = EASettings::new(pop_size, gen_count, problem_dim);
+        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let res = ga.run(settings).expect("Error during GA run");
+        for k in 1..res.avg_fitness.len() {
+            assert!(res.avg_fitness[k-1] >= res.avg_fitness[k]);
         }
     }
 }

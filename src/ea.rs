@@ -176,3 +176,37 @@ pub fn get_best_individual<T: Individual>(popul: &Vec<T>) -> T {
     let idx = popul.into_iter().position(|ref x| x.get_fitness() == min_fitness).expect("Min fitness is not found");
     popul[idx].clone()
 }
+
+//========================================================
+
+#[cfg(test)]
+mod test {
+    use rand;
+
+    use ea::*;
+    use math::*;
+
+    #[test]
+    fn test_tournament_selection() {
+        const IND_COUNT: usize = 100;
+        const TRIAL_COUNT: u32 = 100;
+
+        let mut prev_mean = 0.5f32;   // avg value in a random array in [0; 1].
+        let mut rng = rand::thread_rng();
+        for t in 2..10 {
+            let mut cur_mean = 0f32;
+            // compute mean fitness for the selected population for TRIAL_COUNT trials.
+            for k in 0..TRIAL_COUNT {
+                let fitness_vals = rand_vector(IND_COUNT, &mut rng);
+                let sel_inds = select_tournament(&fitness_vals, t, &mut rng);
+                let tmp_mean = sel_inds.iter().fold(0f32, |s, &idx| s + fitness_vals[idx]) / IND_COUNT as f32;
+                cur_mean += tmp_mean;
+            }
+            cur_mean /= TRIAL_COUNT as f32;
+            // bigger tournaments should give smaller average fitness in selected population.
+            assert!(cur_mean < prev_mean);
+            prev_mean = cur_mean;
+        }
+
+    }
+}
