@@ -9,6 +9,11 @@ pub fn rand_vector_std_gauss<T: Rng + Sized>(size: usize, rng: &mut T) -> Vec<f3
     (0..size).map(|_| normal_rng.ind_sample(rng) as f32).collect::<Vec<f32>>()
 }
 
+/// The static type is needed according to advice here: https://users.rust-lang.org/t/dynamic-dispatch-and-sized-trait/2918
+pub fn rand_vector<T: Rng + Sized>(size: usize, rng: &mut T) -> Vec<f32> {
+    (0..size).map(|_| rng.gen::<f32>()).collect::<Vec<f32>>()
+}
+
 #[allow(dead_code)]
 pub fn rand_matrix_std_gauss<T: Rng>(height: usize, width: usize, rng: &mut T) -> Vec<Vec<f32>> {
     (0..height).map(|_| rand_vector_std_gauss(width, rng)).collect::<Vec<Vec<f32>>>()
