@@ -11,18 +11,26 @@ use problem::*;
 use result::*;
 use settings::*;
 
+/// Baseline structure for [Genetic Algorithm](https://en.wikipedia.org/wiki/Genetic_algorithm)
 pub struct GA<'a, P: Problem + 'a, T: Individual> {
+    /// Context structure containing information about GA run, its progress and results.
     ctx: Option<EAContext<T>>,
+    /// Reference to the objective function object implementing `Problem` trait.
     problem: &'a P,
 }
 
 impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
+    /// Create a new GA instance for the given `problem`.
     pub fn new(problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
            ctx: None,
         }
     }
 
+    /// Main entry point for the GA. Runs GA with given `settings` and returns `EAResult` object.
+    ///
+    /// # Arguments:
+    /// * `settings` - `EASettings` object.
     pub fn run(&'a mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
@@ -47,6 +55,18 @@ impl<'a, P: Problem, T: Individual> EA<'a, T> for GA<'a, P, T> {
     // }
 }
 
+/// Function for crossing individuals to produce children.
+///
+/// # Arguments:
+/// * `popul` - reference to parent population.
+/// * `sel_inds` - reference to vector of individuals selected for crossing.
+/// * `children` - container for children individuals.
+/// * `use_elite` - flag to specify whether elite individual should be copied to the children
+///                 population.
+/// * `x_prob` - crossing probability. If random U(0, 1) number is above this probability then
+///              no crossing is performed and children are simply copy of selected parents.
+/// * `x_alpha` - parameter for a crossover operator.
+/// * `rng` - reference to pre-initialized RNG.
 pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>, use_elite: bool, x_prob: f32, x_alpha: f32, mut rng: &mut R) {
     let range = Range::new(0, popul.len());
     if use_elite {
@@ -72,6 +92,15 @@ pub fn cross<R: Rng, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, child
     }
 }
 
+/// Implementation of the BLX-alpha crossover.
+///
+/// # Arguments:
+/// * `p1` - reference to the 1st parent.
+/// * `p2` - reference to the 2nd parent.
+/// * `c1` - reference to the 1st child.
+/// * `c2` - reference to the 2nd child.
+/// * `alpha` - parameter for crossover, controlling range of the child gene values.
+/// * `rng` - reference to pre-initialized RNG.
 fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut Rng) {
     let p1_genes = p1.to_vec().unwrap();
     let p2_genes = p2.to_vec().unwrap();
@@ -98,12 +127,26 @@ fn cross_blx_alpha<T: Individual>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha:
     // println!("children: {} : {}", c1_genes.len(), c2_genes.len());
 }
 
+/// Function for mutation of the given population.
+///
+/// # Arguments:
+/// * `children` - population to undergo mutation.
+/// * `mut_prob` - probability of mutation of single gene.
+/// * `mut_sigma` - mutation parameter.
+/// * `rng` - reference to pre-initialized RNG.
 pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, mut_sigma: f32, rng: &mut R) {
     for k in 1..children.len() {
         mutate_gauss(&mut children[k], mut_prob, mut_sigma, rng);
     }
 }
 
+/// Implementation of the Gaussian mutation.
+///
+/// # Arguments:
+/// * `ind` - individual to be mutated.
+/// * `prob` - probability of mutation of single gene.
+/// * `sigma` - standard deviation of mutation.
+/// * `rng` - reference to pre-initialized RNG.
 fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: &mut R) {
     let normal_rng = Normal::new(0.0, sigma as f64);
     let genes = ind.to_vec_mut().unwrap();
