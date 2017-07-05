@@ -11,6 +11,10 @@ use problem::*;
 use result::*;
 use settings::*;
 
+/// Trait representing functionality required to evolve an individual for optimization
+/// and NN tuning tasks.
+///
+/// Contains functions to retrieve genes or neural network from an individual and get/set its fitness.
 pub trait Individual{
     /// Creates a new individual with empty set of genes and NAN fitness.
     fn new() -> Self;

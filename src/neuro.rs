@@ -5,27 +5,53 @@ use std::slice::Iter;
 
 use math::*;
 
-// Should it be just named vector-function as this is what it really is?
+/// Trait to generalize neural network behaviour.
 pub trait NeuralNetwork : Clone {
+    /// Compute output of neural network for a given input vector.
+    ///
+    /// # Arguments:
+    /// * `xs` - input vector
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
+    /// TODO: Compute output of neural network and extend output of every unit (mostly layer) with a given `bypass` vector.
+    /// This function can be used implement bypass connections to the input layer.
+    ///
+    /// # Arguments:
+    /// * `xs` - input vector.
+    /// * `bypass` - bypass vector, which is introduced at the input of every layer.
     fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
         self.compute(xs)
     }
+    /// Returns number of input nodes.
     fn get_inputs_count(&self) -> usize;
+    /// Returns number of output nodes.
     fn get_outputs_count(&self) -> usize;
 }
 
+/// Representation of multilayered neural network with linear activation on output and arbitrary
+/// activations for hidden layers.
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct MultilayeredNetwork {
+    /// Number of input nodes.
     inputs_num: usize,
+    /// Number of output nodes.
     outputs_num: usize,
+    /// Vector of layers.
     layers: Vec<Box<NeuralLayer>>,
+    /// Flag to denote whether the network is built and initialized.
     is_built: bool,
 }
 
 #[allow(dead_code)]
 impl MultilayeredNetwork {
+    /// Create a new multilayered network object with given number of inputs and outputs.
+    ///
+    /// The resulting network is not initialized. To add hidden layeres use `add_hidden_layer` and
+    /// then call `build` function to finalize structure and weights initialization.
+    ///
+    /// # Arguments:
+    /// * `inputs_num` - number of input nodes.
+    /// * `outputs_num` - number of output nodes.
     pub fn new(inputs_num: usize, outputs_num: usize) -> MultilayeredNetwork {
         MultilayeredNetwork{
             inputs_num: inputs_num,
@@ -35,6 +61,16 @@ impl MultilayeredNetwork {
         }
     }
 
+    /// Create and initialize a new neural network object given sizes of layers (including
+    /// input and output ones) and activation types.
+    ///
+    /// The resulting network will have a linear activation in the output layer.
+    ///
+    /// # Arguments:
+    /// * `layers` - array containing sizes of input (`layers[0]`), output (`layers[layers.len()-1]`)
+    ///              and hidden layers (`layers[1:layers.len()-1]`).
+    /// * `acts` - array of activations for hidden layers. Note that `k`-th hidden layers will
+    ///            have `k`-th activation!
     pub fn from_layers<R: Rng+Sized>(layers: &[u32], acts: &[ActivationFunctionType], rng: &mut R) -> MultilayeredNetwork {
         assert!(layers.len() >= 2);
 
@@ -46,10 +82,18 @@ impl MultilayeredNetwork {
         res
     }
 
+    /// Number of hidden+output layers in the neural network.
     pub fn len(&self) -> usize {
         self.layers.len()
     }
 
+    /// Add a hidden layer to an uninitialized network.
+    ///
+    /// Panics if the network has already been initialized .
+    ///
+    /// # Arguments:
+    /// * `size` - number of nodes in a layer.
+    /// * `actf` - type of activation function.
     pub fn add_hidden_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
         if self.is_built {
             panic!("Can not add layer to already built network.");
@@ -58,6 +102,10 @@ impl MultilayeredNetwork {
         self
     }
 
+    /// Finalize building neural network and initialize its weights.
+    ///
+    /// # Arguments:
+    /// * `rng` - mutable reference to the external RNG.
     pub fn build<R: Rng+Sized>(&mut self, rng: &mut R) {
         if self.is_built {
             panic!("The network has already been built.");
@@ -75,7 +123,32 @@ impl MultilayeredNetwork {
         self.is_built = true;
     }
 
-    /// Returns weights and biases layer by layer.
+    /// Returns tuple containing weights and biases layer by layer.
+    ///
+    /// # Return:
+    /// * `result.0` - matrix of weights. `k`-th row corresponds to the flattened vector of weights
+    ///                 for `k`-th layer.
+    /// * `result.1` - matrix of biases.  `k`-th row corresponds to the vector of biases
+    ///                 for `k`-th layer.
+    ///
+    /// # Example:
+    /// ```
+    /// const INPUT_SIZE: usize = 20;
+    /// const OUTPUT_SIZE: usize = 2;
+    ///
+    /// let mut rng = rand::thread_rng();   // needed for weights initialization when NN is built.
+    /// let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
+    /// net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
+    ///    .add_hidden_layer(20 as usize, ActivationFunctionType::Sigmoid)
+    ///    .build(&mut rng);       // `build` finishes creation of neural network.
+    ///
+    /// let (ws, bs) = net.get_weights();   // `ws` and `bs` are `Vec` arrays containing weights and biases for each layer.
+    /// assert!(ws.len() == 3);     // number of elements equals to number of hidden layers + 1 output layer
+    /// assert!(bs.len() == 3);     // number of elements equals to number of hidden layers + 1 output layer
+    ///
+    /// let rnd_input = (0..INPUT_SIZE).map(|_| rng.gen::<f32>()).collect::<Vec<f32>>();
+    /// println!("NN outputs: {:?}", net.compute(&rnd_input));
+    /// ```
     pub fn get_weights(&self) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
         if !self.is_built {
             panic!("Can not retreive network weights: the network is not built yet.");
@@ -92,6 +165,12 @@ impl MultilayeredNetwork {
     }
 
     /// Sets weights and biases layer by layer.
+    ///
+    /// See description  for the `get_weights` for more details and example.
+    ///
+    /// # Arguments:
+    /// * `wss` - matrix of weights. `wss[k]` flattened vector of weights for the `k`-th layer.
+    /// * `bss` - matrix of biases. `bss[k]` flattened vector of biases for the `k`-th layer.
     pub fn set_weights(&mut self, wss: &Vec<Vec<f32>>, bss: &Vec<Vec<f32>>) {
         if !self.is_built {
             panic!("Can not set network weights: the network is not built yet.");
@@ -102,6 +181,7 @@ impl MultilayeredNetwork {
         }
     }
 
+    /// Returns iterator for layers.
     pub fn iter_layers(&self) -> Iter<Box<NeuralLayer>> {
         self.layers.iter()
     }
@@ -138,18 +218,29 @@ impl Clone for MultilayeredNetwork {
 
 //========================================
 
+/// Structure to describe a layer for neural network.
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct NeuralLayer {
+    /// Number of nodes.
     size: usize,
+    /// Matrix of weights. `weights[k]` is a vector of weights for the `k`-th node.
     weights: Vec<Vec<f32>>,
+    /// Vector of biases. `biases[k]` is a biases for the `k`-th node.
     biases: Vec<f32>,
+    /// Vector of outputs for nodes. `outputs[k]` contains output for the `k`-th node.
     outputs: Vec<f32>,
+    /// Type of activation function for every node in the layer.
     activation: ActivationFunctionType,
 }
 
 #[allow(dead_code)]
 impl NeuralLayer {
+    /// Create a new layer with given size and activation function.
+    ///
+    /// # Arguments:
+    /// * `size` - number of nodes.
+    /// * `actf` - type of activation function.
     pub fn new(size: usize, actf: ActivationFunctionType) -> NeuralLayer {
         NeuralLayer{
             size: size,
@@ -160,13 +251,22 @@ impl NeuralLayer {
         }
     }
 
+    /// Initializes weights of the layer.
+    ///
+    /// # Arguments:
+    /// * `inputs_num` - number of inputs for the layer.
+    /// * `rng` - mutable reference to the external RNG.
     pub fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
         for _ in 0..self.size {
             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
         }
         self.biases = rand_vector_std_gauss(self.size, rng);
     }
-    
+
+    /// Compute output of the layer given a vector of input signals.
+    ///
+    /// # Arguments:
+    /// * `xs` -- input vector.
     pub fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
         self.outputs = dot_mv(&self.weights, &xs).iter().zip(self.biases.iter())
                             .map(|(&w, &b)| w+b)
@@ -175,19 +275,25 @@ impl NeuralLayer {
         self.outputs.clone()
     }
 
+    /// Return number of nodes in the layer.
     pub fn len(&self) -> usize {self.size}
 
+    /// Return flattened vector of weights and biases.
     pub fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
         let mut res_w = Vec::new();
-        let mut res_b = Vec::with_capacity(self.size);
+        let mut res_b: Vec<f32> = Vec::from(&self.biases[0..self.size]);
         
         for k in 0..self.size {
             res_w.extend(self.weights[k].clone());
-            res_b.push(self.biases[k]);
         }
         (res_w, res_b)
     }
 
+    /// Set weights and biases for the layer.
+    ///
+    /// # Arguments:
+    /// * `ws` - vector of flattened weights.
+    /// * `bs` - vector of biases.
     pub fn set_weights(&mut self, ws: &Vec<f32>, bs: &Vec<f32>) {
         let inputs = self.weights[0].len();
         for k in 0..self.size {
@@ -199,6 +305,7 @@ impl NeuralLayer {
 
 //========================================
 
+/// Enumeration for the different types of activations.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum ActivationFunctionType {
