@@ -370,6 +370,7 @@ pub fn compute_activations_inplace(xs: &mut [f32], actf: ActivationFunctionType)
 #[cfg(test)]
 mod test {
     use rand;
+    use rand::{StdRng, SeedableRng};
 
     use math::*;
     use neuro::*;
@@ -386,7 +387,7 @@ mod test {
     #[test]
     fn test_sigmoid_activation() {
         const LEN: usize = 100;
-        let mut rng = rand::thread_rng();
+        let mut rng: StdRng = StdRng::from_seed(&[0 as usize]);
         let xs = rand_vector_std_gauss(LEN, &mut rng);
         let act_f = SigmoidActivation{};
         assert!((0..LEN).all(|k| {
