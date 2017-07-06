@@ -20,6 +20,7 @@ pub struct EAResult<T: Individual> {
 }
 
 impl<T: Individual> EAResult<T> {
+    /// Initialize empty result structure.
     pub fn new() -> EAResult<T> {
         EAResult{avg_fitness: Vec::new(),
                  min_fitness: Vec::new(),

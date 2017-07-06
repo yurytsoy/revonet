@@ -10,14 +10,26 @@ use problem::*;
 
 //--------------------------------------------
 
+/// Trait for problem where NN is a solution.
 pub trait NeuroProblem: Problem {
+    /// Number of input variables.
     fn get_inputs_count(&self) -> usize;
+    /// Number of output (target) variables.
     fn get_outputs_count(&self) -> usize;
+    /// Returns random network with default number of inputs and outputs and some predefined structure.
+    ///
+    /// For now all networks returned by implementation of this functions have the same structure and
+    /// random weights. This was done to ensure possibility to cross NN's and might change in the future.
     fn get_default_net(&self) -> MultilayeredNetwork;
 
+    /// Compute fitness value for the given neural network.
+    ///
+    /// # Arguments:
+    /// * `net` - neural network to compute fitness for.
     fn compute_with_net<T: NeuralNetwork>(&self, net: &mut T) -> f32;
 }
 
+/// Default implementation of the `Problem` trait for `NeuroProblem`
 impl<T: NeuroProblem> Problem for T {
     fn compute<I: Individual>(&self, ind: &mut I) -> f32 {
         let fitness;
@@ -37,7 +49,12 @@ impl<T: NeuroProblem> Problem for T {
 }
 
 ///
-/// Problems which are typically used to test GP algorithms.
+/// Problem which is typically used to test GP algorithms. Represents symbolic regression with
+/// 1 input and 1 output. There are three variants:
+/// * `f` - 4-th order polynomial.
+/// * `g` - 5-th order polynomial.
+/// * `h` - 6-th order polynomial.
+///
 /// See for details: Luke S. Essentials of metaheuristics.
 ///
 #[allow(dead_code)]
@@ -47,6 +64,13 @@ pub struct SymbolicRegressionProblem {
 
 #[allow(dead_code)]
 impl SymbolicRegressionProblem {
+    /// Create a new problem depending on the problem type:
+    /// * `f` - 4-th order polynomial.
+    /// * `g` - 5-th order polynomial.
+    /// * `h` - 6-th order polynomial.
+    ///
+    /// # Arguments:
+    /// * `problem_type` - symbol from set `('f', 'g', 'h')` to set the problem type.
     pub fn new(problem_type: char) -> SymbolicRegressionProblem {
         match problem_type {
             'f' => SymbolicRegressionProblem::new_f(),
@@ -59,14 +83,17 @@ impl SymbolicRegressionProblem {
         }
     }
 
+    /// Create `f`-type problem (4-th order polynomial)
     pub fn new_f() -> SymbolicRegressionProblem {
         SymbolicRegressionProblem { func: SymbolicRegressionProblem::f }
     }
 
+    /// Create `g`-type problem (4-th order polynomial)
     pub fn new_g() -> SymbolicRegressionProblem {
         SymbolicRegressionProblem { func: SymbolicRegressionProblem::g }
     }
 
+    /// Create `h`-type problem (4-th order polynomial)
     pub fn new_h() -> SymbolicRegressionProblem {
         SymbolicRegressionProblem { func: SymbolicRegressionProblem::h }
     }

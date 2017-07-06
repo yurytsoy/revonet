@@ -3,15 +3,32 @@ use std;
 
 use ea::*;
 
+/// Represents baseline interface for the objective function.
+///
+/// By default solution is a vector of real-numbers.
 pub trait Problem{
+    /// Returns whether given fitness value is enough to be a solution.
+    ///
+    /// # Arguments:
+    /// * `value` - fitness value to consider.
     fn is_solution(&self, value: f32) -> bool {
         value < 1e-3f32
     }
+    /// Generate random individual for the problem. Default implementation creates a real-coded
+    /// individual with the number of genes equal to `size`
+    ///
+    /// # Arguments:
+    /// * `size` - number of genes.
+    /// * `rng` - reference to pre-initialized RNG.
     fn get_random_individual<T: Individual, R: Rng>(&self, size: usize, mut rng: &mut R) -> T {
         let mut res_ind = T::new();
         res_ind.init(size, rng);
         res_ind
     }
+    /// Computes fitness value for a given individual.
+    ///
+    /// # Arguments:
+    /// * `ind` - individual to compute a fitness for.
     fn compute<T: Individual>(&self, ind: &mut T) -> f32;
 }
 
@@ -20,6 +37,7 @@ pub trait Problem{
 Some other functions: https://en.wikipedia.org/wiki/Test_functions_for_optimization
 */
 
+/// Sample problem representing [Sphere function](https://en.wikipedia.org/wiki/Test_functions_for_optimization).
 #[allow(dead_code)]
 pub struct SphereProblem;
 impl Problem for SphereProblem {
@@ -30,6 +48,7 @@ impl Problem for SphereProblem {
 }
 
 //---------------------------------------------------------------
+/// Sample problem representing [Rastrigin function](https://en.wikipedia.org/wiki/Rastrigin_function).
 #[allow(dead_code)]
 pub struct RastriginProblem;
 impl Problem for RastriginProblem {
@@ -43,6 +62,7 @@ impl Problem for RastriginProblem {
 
 
 //---------------------------------------------------------------
+/// Sample problem representing [Rosenbrock function](https://en.wikipedia.org/wiki/Rosenbrock_function).
 #[allow(dead_code)]
 pub struct RosenbrockProblem;
 impl Problem for RosenbrockProblem {

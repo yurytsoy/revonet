@@ -15,6 +15,7 @@ use settings::*;
 /// and NN tuning tasks.
 ///
 /// Contains functions to retrieve genes or neural network from an individual and get/set its fitness.
+#[allow(dead_code)]
 pub trait Individual{
     /// Creates a new individual with empty set of genes and NAN fitness.
     fn new() -> Self;
