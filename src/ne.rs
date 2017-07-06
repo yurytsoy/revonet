@@ -13,6 +13,8 @@ use problem::*;
 use result::*;
 use settings::*;
 
+/// Represents individual for neuroevolution. The main difference is that the NE individual also
+/// has a `network` field, which stores current neural network.
 #[derive(Debug)]
 pub struct NEIndividual {
     genes: Vec<f32>,
@@ -22,13 +24,7 @@ pub struct NEIndividual {
 
 #[allow(dead_code)]
 impl<'a> NEIndividual {
-    pub fn get_network(&'a self) -> Option<&'a MultilayeredNetwork> {
-        match &self.network {
-            &Some(ref x) => Some(x),
-            &None => None
-        }
-    }
-
+    /// Update individual's network by assigning gene values to network's weights.
     fn update_net(&mut self) {
         match &mut self.network {
             &mut Some(ref mut net) => {
@@ -137,19 +133,27 @@ impl Individual for NEIndividual {
 
 //================================================================================
 
+/// Structure for neuroevolutionary algorithm.
 pub struct NE<'a, P: Problem + 'a, T: Individual> {
+    /// Context structure containing information about GA run, its progress and results.
     ctx: Option<EAContext<T>>,
+    /// Reference to the objective function object implementing `Problem` trait.
     problem: &'a P,
 }
 
 #[allow(dead_code)]
 impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
+    /// Create a new neuroevolutionary algorithm for the given problem.
     pub fn new(problem: &'a P) -> NE<'a, P, T> {
         NE {problem: problem,
            ctx: None,
         }
     }
 
+    /// Run evolution of neural networks and return `EAResult` object.
+    ///
+    /// # Arguments:
+    /// * `settings` - `EASettings` object.
     pub fn run(&mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
