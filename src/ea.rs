@@ -251,6 +251,7 @@ pub fn get_best_individual<T: Individual>(popul: &Vec<T>) -> T {
 
 //========================================================
 
+#[allow(unused_imports)]
 #[cfg(test)]
 mod test {
     use rand;

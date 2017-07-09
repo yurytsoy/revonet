@@ -1,6 +1,5 @@
 use rand;
 use rand::{Rng, StdRng, SeedableRng};
-//use std;
 
 use ea::*;
 use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};

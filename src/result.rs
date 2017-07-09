@@ -85,15 +85,5 @@ mod test {
         assert!(res.fe_count == res2.fe_count);
         assert!(res.first_hit_fe_count == res2.first_hit_fe_count);
         assert!(res.best.fitness == res2.best.fitness);
-//        assert!(settings.gen_count == settings2.gen_count);
-//        assert!(settings.mut_prob == settings2.mut_prob);
-//        assert!(settings.mut_sigma == settings2.mut_sigma);
-//        assert!(settings.param_count == settings2.param_count);
-//        assert!(settings.pop_size == settings2.pop_size);
-//        assert!(settings.rng_seed == settings2.rng_seed);
-//        assert!(settings.tour_size == settings2.tour_size);
-//        assert!(settings.use_elite == settings2.use_elite);
-//        assert!(settings.x_alpha == settings2.x_alpha);
-//        assert!(settings.x_prob == settings2.x_prob);
     }
 }
