@@ -6,3 +6,6 @@ license = "GPL-3.0"
 
 [dependencies]
 rand = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"

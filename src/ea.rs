@@ -1,21 +1,18 @@
-use rand;
-use rand::{Rng, StdRng};
-use rand::distributions::{Normal, IndependentSample, Range};
+use rand::{Rng};
+use rand::distributions::{IndependentSample, Range};
+use serde::ser::Serialize;
 use std;
-use std::rc::Rc;
 
 use context::*;
 use math::*;
-use neuro::{NeuralNetwork, MultilayeredNetwork};
+use neuro::{MultilayeredNetwork};
 use problem::*;
-use result::*;
-use settings::*;
 
 /// Trait representing functionality required to evolve an individual for optimization
 /// and NN tuning tasks.
 ///
 /// Contains functions to retrieve genes or neural network from an individual and get/set its fitness.
-#[allow(dead_code)]
+#[allow(dead_code, unused_variables)]
 pub trait Individual{
     /// Creates a new individual with empty set of genes and NAN fitness.
     fn new() -> Self;
@@ -47,7 +44,7 @@ pub trait Individual{
 }
 
 /// Represents real-coded individual with genes encoded as vector of real numbers.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RealCodedIndividual {
     /// Collection of individual genes.
     pub genes: Vec<f32>,
@@ -93,7 +90,7 @@ impl Individual for RealCodedIndividual{
 /// Trait for an evolutionary algorithm.
 /// Defines functions which are typical for running a common EA.
 /// To implement a trait a function `breed` should be implemented.
-pub trait EA<'a, T: Individual> {
+pub trait EA<'a, T: Individual+Serialize> {
     /// "Main" function for the EA which runs a cycle for an evolutionary search.
     ///
     /// # Arguments:
@@ -271,7 +268,7 @@ mod test {
         for t in 2..10 {
             let mut cur_mean = 0f32;
             // compute mean fitness for the selected population for TRIAL_COUNT trials.
-            for k in 0..TRIAL_COUNT {
+            for _ in 0..TRIAL_COUNT {
                 let fitness_vals = rand_vector(IND_COUNT, &mut rng);
                 let sel_inds = select_tournament(&fitness_vals, t, &mut rng);
                 let tmp_mean = sel_inds.iter().fold(0f32, |s, &idx| s + fitness_vals[idx]) / IND_COUNT as f32;

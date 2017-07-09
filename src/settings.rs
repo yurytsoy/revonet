@@ -1,5 +1,9 @@
+use serde_json;
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
+
 /// Settings for evolutionary algorithm.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EASettings {
     /// Seed for RNG.
     pub rng_seed: u32,
@@ -53,5 +57,47 @@ impl EASettings {
             mut_prob: 1f32 / (param_count as f32),
             mut_sigma: 0.1f32,
         }
+    }
+
+    pub fn from_json(filename: &str) -> Self {
+        let file = File::open(filename).unwrap();
+        let mut buf_reader = BufReader::new(file);
+        let mut json_str = String::new();
+        buf_reader.read_to_string(&mut json_str).unwrap();
+
+        let res: EASettings = serde_json::from_str(&json_str).unwrap();
+        res
+    }
+
+    pub fn to_json(&self, filename: &str) {
+        let mut file = File::create(&filename).unwrap();
+        let json_str = serde_json::to_string(&self).unwrap();
+        file.write_all(json_str.as_bytes()).unwrap();
+    }
+}
+
+//============================================================================================
+
+#[cfg(test)]
+mod test {
+    use settings::*;
+
+    #[test]
+    fn test_json() {
+        let settings = EASettings::new(100, 100, 100);
+        let filename = "test_json.json";
+        settings.to_json(&filename);
+
+        let settings2 = EASettings::from_json(&filename);
+        assert!(settings.gen_count == settings2.gen_count);
+        assert!(settings.mut_prob == settings2.mut_prob);
+        assert!(settings.mut_sigma == settings2.mut_sigma);
+        assert!(settings.param_count == settings2.param_count);
+        assert!(settings.pop_size == settings2.pop_size);
+        assert!(settings.rng_seed == settings2.rng_seed);
+        assert!(settings.tour_size == settings2.tour_size);
+        assert!(settings.use_elite == settings2.use_elite);
+        assert!(settings.x_alpha == settings2.x_alpha);
+        assert!(settings.x_prob == settings2.x_prob);
     }
 }

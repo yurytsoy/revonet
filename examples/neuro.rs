@@ -1,6 +1,6 @@
 extern crate rand;
 
-use rand::{Rng, ThreadRng};
+use rand::{Rng};
 
 extern crate revonet;
 

@@ -1,7 +1,13 @@
+use serde::de::{DeserializeOwned};
+use serde::ser::{Serialize};
+use serde_json;
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
+
 use ea::Individual;
 
 /// Structure to hold results for the genetic algorithm run.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EAResult<T: Individual> {
     /// Array of minimal absolute values of fitness for each generation.
     pub min_fitness: Vec<f32>,
@@ -19,7 +25,7 @@ pub struct EAResult<T: Individual> {
     pub fe_count: u32,
 }
 
-impl<T: Individual> EAResult<T> {
+impl<'de, T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
     /// Initialize empty result structure.
     pub fn new() -> EAResult<T> {
         EAResult{avg_fitness: Vec::new(),
@@ -30,5 +36,64 @@ impl<T: Individual> EAResult<T> {
                  first_hit_fe_count: 0,
                  fe_count: 0,
                  }
+    }
+
+    pub fn from_json<'a>(filename: &str) -> Self {
+        let file = File::open(filename).unwrap();
+        let mut buf_reader = BufReader::new(file);
+        let mut json_str = String::new();
+        buf_reader.read_to_string(&mut json_str).unwrap();
+
+        let res: EAResult<T> = serde_json::from_str(&json_str).unwrap();
+//        let res: EAResult<T> = serde_json::from_reader(buf_reader).unwrap();
+        res.clone()
+    }
+
+    pub fn to_json(&self, filename: &str) {
+        let mut file = File::create(&filename).unwrap();
+        let json_str = serde_json::to_string(&self).unwrap();
+        file.write_all(json_str.as_bytes()).unwrap();
+    }
+}
+
+//============================================================================================
+
+#[cfg(test)]
+mod test {
+    use ea::*;
+    use ga::*;
+    use problem::*;
+    use result::*;
+    use settings::*;
+
+    #[test]
+    fn test_json() {
+        let pop_size = 10u32;
+        let problem_dim = 5u32;
+        let problem = SphereProblem{};
+
+        let gen_count = 10u32;
+        let settings = EASettings::new(pop_size, gen_count, problem_dim);
+        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let res = ga.run(settings).expect("Error during GA run");
+
+        let filename = "test_json_earesult.json";
+        res.to_json(&filename);
+
+        let res2: EAResult<RealCodedIndividual> = EAResult::from_json(&filename);
+        assert!(res.best_fe_count == res2.best_fe_count);
+        assert!(res.fe_count == res2.fe_count);
+        assert!(res.first_hit_fe_count == res2.first_hit_fe_count);
+        assert!(res.best.fitness == res2.best.fitness);
+//        assert!(settings.gen_count == settings2.gen_count);
+//        assert!(settings.mut_prob == settings2.mut_prob);
+//        assert!(settings.mut_sigma == settings2.mut_sigma);
+//        assert!(settings.param_count == settings2.param_count);
+//        assert!(settings.pop_size == settings2.pop_size);
+//        assert!(settings.rng_seed == settings2.rng_seed);
+//        assert!(settings.tour_size == settings2.tour_size);
+//        assert!(settings.use_elite == settings2.use_elite);
+//        assert!(settings.x_alpha == settings2.x_alpha);
+//        assert!(settings.x_prob == settings2.x_prob);
     }
 }

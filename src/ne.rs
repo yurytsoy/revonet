@@ -1,13 +1,13 @@
 use rand::{Rng};
+use serde::de::{Deserialize, DeserializeOwned};
+use serde::ser::Serialize;
 use std;
-// use std::iter::FromIterator;
 use std::rc::*;
 
 use context::*;
 use ea::*;
 use ga::*;
 use math::*;
-use neproblem::*;
 use neuro::*;
 use problem::*;
 use result::*;
@@ -15,7 +15,7 @@ use settings::*;
 
 /// Represents individual for neuroevolution. The main difference is that the NE individual also
 /// has a `network` field, which stores current neural network.
-#[derive(Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NEIndividual {
     genes: Vec<f32>,
     fitness: f32,
@@ -134,7 +134,7 @@ impl Individual for NEIndividual {
 //================================================================================
 
 /// Structure for neuroevolutionary algorithm.
-pub struct NE<'a, P: Problem + 'a, T: Individual> {
+pub struct NE<'a, P: Problem + 'a, T: Individual+Deserialize<'a>+Serialize> {
     /// Context structure containing information about GA run, its progress and results.
     ctx: Option<EAContext<T>>,
     /// Reference to the objective function object implementing `Problem` trait.
@@ -142,7 +142,7 @@ pub struct NE<'a, P: Problem + 'a, T: Individual> {
 }
 
 #[allow(dead_code)]
-impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
+impl<'a, P: Problem, T: Individual+Clone+DeserializeOwned+Serialize> NE<'a, P, T> {
     /// Create a new neuroevolutionary algorithm for the given problem.
     pub fn new(problem: &'a P) -> NE<'a, P, T> {
         NE {problem: problem,
@@ -163,7 +163,7 @@ impl<'a, P: Problem, T: Individual> NE<'a, P, T> {
     }
 }
 
-impl<'a, T: Individual, P: Problem> EA<'a, T> for NE<'a, P, T> {
+impl<'a, T: Individual+Serialize+Deserialize<'a>, P: Problem> EA<'a, T> for NE<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
@@ -179,8 +179,6 @@ mod test {
     use math::*;
     use ne::*;
     use neproblem::*;
-    use neuro::*;
-    use settings::*;
 
     #[test]
     pub fn test_symbolic_regression() {

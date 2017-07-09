@@ -1,5 +1,5 @@
 // use rand;
-use rand::{Rng, StdRng};
+use rand::{Rng};
 use rand::distributions::{Normal, IndependentSample};
 use std;
 

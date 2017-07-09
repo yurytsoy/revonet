@@ -1,25 +1,25 @@
 use rand;
-use rand::{Rng, SeedableRng, StdRng};
+use rand::{Rng};
 use rand::distributions::{Normal, IndependentSample, Range};
-use std;
+use serde::de::{DeserializeOwned};
+use serde::ser::Serialize;
 use std::rc::Rc;
 
 use context::*;
 use ea::*;
-use math::*;
 use problem::*;
 use result::*;
 use settings::*;
 
 /// Baseline structure for [Genetic Algorithm](https://en.wikipedia.org/wiki/Genetic_algorithm)
-pub struct GA<'a, P: Problem + 'a, T: Individual> {
+pub struct GA<'a, P: Problem + 'a, T: Individual+Serialize> {
     /// Context structure containing information about GA run, its progress and results.
     ctx: Option<EAContext<T>>,
     /// Reference to the objective function object implementing `Problem` trait.
     problem: &'a P,
 }
 
-impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
+impl<'a, 'de, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> GA<'a, P, T> {
     /// Create a new GA instance for the given `problem`.
     pub fn new(problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
@@ -40,7 +40,7 @@ impl<'a, P: Problem, T: Individual + 'a> GA<'a, P, T> {
     }
 }
 
-impl<'a, P: Problem, T: Individual> EA<'a, T> for GA<'a, P, T> {
+impl<'a, P: Problem, T: Individual+Serialize> EA<'a, T> for GA<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
@@ -162,7 +162,7 @@ fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: 
 #[cfg(test)]
 mod test {
     use rand;
-    use rand::*;
+    use rand::{StdRng, SeedableRng};
 
     use ea::*;
     use ga::*;
@@ -202,12 +202,13 @@ mod test {
         const TRIALS: usize = 1000;
 
         let sqrt_trials = (TRIALS as f32).sqrt();
-        let mut rng = rand::thread_rng();
+//        let mut rng = rand::thread_rng();
+        let mut rng = StdRng::from_seed(&[0 as usize]);
         let mut sigma = 0f32;
         while sigma <= 0.5f32 {
             let mut p1 = RealCodedIndividual::new();
             p1.genes = vec![0f32; SIZE];
-            for k in 0..TRIALS {
+            for _ in 0..TRIALS {
                 mutate_gauss(&mut p1, 1f32, sigma, &mut rng);
             }
             // the resulting distribution should be gaussian with SD = sqrt(1000) * sigma

@@ -1,11 +1,14 @@
 use rand;
-use rand::{Rng, ThreadRng};
+use rand::{Rng};
+//use serde::de::{Deserialize};
+//use serde::ser::{Serialize};
 use std::fmt::Debug;
 use std::slice::Iter;
 
 use math::*;
 
 /// Trait to generalize neural network behaviour.
+#[allow(dead_code, unused_variables)]
 pub trait NeuralNetwork : Clone {
     /// Compute output of neural network for a given input vector.
     ///
@@ -29,7 +32,7 @@ pub trait NeuralNetwork : Clone {
 
 /// Representation of multilayered neural network with linear activation on output and arbitrary
 /// activations for hidden layers.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct MultilayeredNetwork {
     /// Number of input nodes.
@@ -219,7 +222,7 @@ impl Clone for MultilayeredNetwork {
 //========================================
 
 /// Structure to describe a layer for neural network.
-#[derive(Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct NeuralLayer {
     /// Number of nodes.
@@ -281,7 +284,7 @@ impl NeuralLayer {
     /// Return flattened vector of weights and biases.
     pub fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
         let mut res_w = Vec::new();
-        let mut res_b: Vec<f32> = Vec::from(&self.biases[0..self.size]);
+        let res_b: Vec<f32> = Vec::from(&self.biases[0..self.size]);
         
         for k in 0..self.size {
             res_w.extend(self.weights[k].clone());
@@ -307,7 +310,7 @@ impl NeuralLayer {
 
 /// Enumeration for the different types of activations.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum ActivationFunctionType {
     Linear,
     Sigmoid,

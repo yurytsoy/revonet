@@ -1,10 +1,8 @@
 use rand;
 use rand::{Rng, StdRng, SeedableRng};
-use std;
+//use std;
 
 use ea::*;
-use math::*;
-use ne::NEIndividual;
 use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};
 use problem::*;
 
@@ -30,6 +28,7 @@ pub trait NeuroProblem: Problem {
 }
 
 /// Default implementation of the `Problem` trait for `NeuroProblem`
+#[allow(unused_variables, unused_mut)]
 impl<T: NeuroProblem> Problem for T {
     fn compute<I: Individual>(&self, ind: &mut I) -> f32 {
         let fitness;
@@ -152,28 +151,37 @@ impl NeuroProblem for SymbolicRegressionProblem {
 
 //=========================================================
 
-#[test]
-fn test_symb_regression_problem() {
-    for prob_type in vec!['f', 'g', 'h'] {
-        let mut rng = rand::thread_rng();
-        let prob = SymbolicRegressionProblem::new(prob_type);
-        println!("Created problem of type: {}", prob_type);
+#[cfg(test)]
+mod test {
+    use rand;
 
-        let mut net = prob.get_default_net();
-        println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_count(), net.get_outputs_count(), net.len()-1);
-        println!("  Network weights: {:?}", net.get_weights());
-        let mut ind: NEIndividual = prob.get_random_individual(0, &mut rng);
-        println!("  Random individual: {:?}", ind.to_vec().unwrap());
-        println!("  Random individual ANN: {:?}", ind.to_net().unwrap());
+    use math::*;
+    use ne::NEIndividual;
+    use neproblem::*;
 
-        let input_size = net.get_inputs_count();
-        let mut ys = Vec::with_capacity(100);
-        for _ in 0..100 {
-            let x = rand_vector_std_gauss(input_size, &mut rng);
-            let y = net.compute(&x);
-            ys.push(y);
+    #[test]
+    fn test_symb_regression_problem() {
+        for prob_type in vec!['f', 'g', 'h'] {
+            let mut rng = rand::thread_rng();
+            let prob = SymbolicRegressionProblem::new(prob_type);
+            println!("Created problem of type: {}", prob_type);
+
+            let mut net = prob.get_default_net();
+            println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_count(), net.get_outputs_count(), net.len()-1);
+            println!("  Network weights: {:?}", net.get_weights());
+            let mut ind: NEIndividual = prob.get_random_individual(0, &mut rng);
+            println!("  Random individual: {:?}", ind.to_vec().unwrap());
+            println!("  Random individual ANN: {:?}", ind.to_net().unwrap());
+
+            let input_size = net.get_inputs_count();
+            let mut ys = Vec::with_capacity(100);
+            for _ in 0..100 {
+                let x = rand_vector_std_gauss(input_size, &mut rng);
+                let y = net.compute(&x);
+                ys.push(y);
+            }
+            println!("  Network outputs for 100 random inputs: {:?}", ys);
+            println!("  Network evaluation: {:?}\n", prob.compute_with_net(&mut net));
         }
-        println!("  Network outputs for 100 random inputs: {:?}", ys);
-        println!("  Network evaluation: {:?}\n", prob.compute_with_net(&mut net));
     }
 }

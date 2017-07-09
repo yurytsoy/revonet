@@ -1,7 +1,7 @@
 extern crate rand;
 extern crate revonet;
 
-use rand::{Rng, StdRng, SeedableRng};
+//use rand::{Rng, StdRng, SeedableRng};
 
 use revonet::ea::*;
 use revonet::ga::*;

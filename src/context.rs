@@ -1,7 +1,8 @@
-use rand::{Rng, SeedableRng, StdRng};
+use rand::{SeedableRng, StdRng};
+use serde::de::DeserializeOwned;
+use serde::ser::Serialize;
 
 use ea::*;
-use ga::*;
 use problem::*;
 use result::*;
 use settings::*;
@@ -13,7 +14,7 @@ use settings::*;
 /// Also stores statistics and results of the current run.
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct EAContext<T: Individual> {
+pub struct EAContext<T: Individual+Serialize> {
     /// Settings of evolutionary algorithm.
     pub settings: EASettings,
     /// Results of the current run containing fitness statistics across generations and the best found solution.
@@ -29,7 +30,7 @@ pub struct EAContext<T: Individual> {
     pub rng: StdRng,
 }
 
-impl<T: Individual> EAContext<T> {
+impl<'de, T: Individual+Clone+Serialize+DeserializeOwned> EAContext<T> {
     /// Creates an EA context given current settings and reference to a problem. Also seeds RNG used
     /// in the EA.
     ///
