@@ -76,6 +76,12 @@ impl Problem for SphereProblem {
 // Dummy problem returning random fitness.
 struct RandomNEProblem {}
 
+impl RandomNEProblem {
+    fn new() -> RandomNEProblem {
+        RandomNEProblem{}
+    }
+}
+
 impl NeuroProblem for RandomNEProblem {
     // return number of NN inputs.
     fn get_inputs_count(&self) -> usize {1}

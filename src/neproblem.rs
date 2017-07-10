@@ -47,6 +47,46 @@ impl<T: NeuroProblem> Problem for T {
 }
 
 ///
+/// Classical noiseless XOR problem with 2 binary inputs and 1 output.
+///
+#[allow(dead_code)]
+pub struct XorProblem {}
+
+impl XorProblem {
+    fn new() -> XorProblem {
+        XorProblem{}
+    }
+}
+
+#[allow(dead_code)]
+impl NeuroProblem for XorProblem {
+    fn get_inputs_count(&self) -> usize {2}
+    fn get_outputs_count(&self) -> usize {1}
+    fn get_default_net(&self) -> MultilayeredNetwork {
+        let mut rng = rand::thread_rng();
+        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
+        net.add_hidden_layer(2 as usize, ActivationFunctionType::Sigmoid)
+            .build(&mut rng);
+        net
+    }
+
+    fn compute_with_net<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
+        let mut er = 0f32;
+
+        let output = nn.compute(&[0f32, 0f32]);
+        er += output[0] * output[0];
+        let output = nn.compute(&[1f32, 1f32]);
+        er += output[0] * output[0];
+        let output = nn.compute(&[0f32, 1f32]);
+        er += (1f32-output[0]) * (1f32-output[0]);
+        let output = nn.compute(&[1f32, 0f32]);
+        er += (1f32-output[0]) * (1f32-output[0]);
+
+        er
+    }
+}
+
+///
 /// Problem which is typically used to test GP algorithms. Represents symbolic regression with
 /// 1 input and 1 output. There are three variants:
 /// * `f` - 4-th order polynomial.
@@ -155,8 +195,22 @@ mod test {
     use rand;
 
     use math::*;
-    use ne::NEIndividual;
+    use ne::*;
     use neproblem::*;
+    use problem::*;
+    use settings::*;
+
+    #[test]
+    fn test_xor_problem() {
+        let (pop_size, gen_count, param_count) = (20, 20, 100); // gene_count does not matter here as NN structure is defined by a problem.
+        let settings = EASettings::new(pop_size, gen_count, param_count);
+        let problem = XorProblem::new();
+
+        let mut ne: NE<XorProblem, NEIndividual> = NE::new(&problem);
+        let res = ne.run(settings).expect("Error: NE result is empty");
+        println!("result: {:?}", res);
+        println!("\nbest individual: {:?}", res.best);
+    }
 
     #[test]
     fn test_symb_regression_problem() {
