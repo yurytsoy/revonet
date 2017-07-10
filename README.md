@@ -87,7 +87,7 @@ impl NeuroProblem for RandomNEProblem {
     fn get_inputs_count(&self) -> usize {1}
     // return number of NN outputs.
     fn get_outputs_count(&self) -> usize {1}
-    // return NN with random weights and a fixed structure. For now the structure should be the same all the time to make sure that crossover is possible. Likely to change in the future as I get more hang on Rust.
+    // return NN with random weights and a fixed structure. For now the structure should be the same all the time to make sure that crossover is possible. Likely to change in the future as I get more hang of Rust.
     fn get_default_net(&self) -> MultilayeredNetwork {
         let mut rng = rand::thread_rng();
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
