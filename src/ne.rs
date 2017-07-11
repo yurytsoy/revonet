@@ -166,7 +166,7 @@ impl<'a, P: Problem, T: Individual+Clone+DeserializeOwned+Serialize> NE<'a, P, T
 impl<'a, T: Individual+Serialize+Deserialize<'a>, P: Problem> EA<'a, T> for NE<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 }
 

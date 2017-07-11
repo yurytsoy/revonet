@@ -43,7 +43,7 @@ impl<'a, 'de, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned +
 impl<'a, P: Problem, T: Individual+Serialize> EA<'a, T> for GA<'a, P, T> {
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 
     // fn get_context_mut(&mut self) -> &'a mut EAContext<T> {
@@ -168,9 +168,13 @@ fn cross_blx_alpha<T: Individual, R: Rng+Sized>(p1: &T, p2: &T, c1: &mut T, c2: 
 /// * `mut_prob` - probability of mutation of single gene.
 /// * `mut_sigma` - mutation parameter.
 /// * `rng` - reference to pre-initialized RNG.
-pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_prob: f32, mut_sigma: f32, rng: &mut R) {
+pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_type: MutationOperator,  mut_prob: f32, mut_sigma: f32, rng: &mut R) {
+    let mut_func = match mut_type {
+        MutationOperator::Gaussian => mutate_gauss,
+        MutationOperator::Uniform => mutate_uniform,
+    };
     for k in 1..children.len() {
-        mutate_gauss(&mut children[k], mut_prob, mut_sigma, rng);
+        mut_func(&mut children[k], mut_prob, mut_sigma, rng);
     }
 }
 
@@ -191,10 +195,29 @@ fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: 
     }
 }
 
+/// Implementation of the uniform mutation. Each gene is updated with probability `prob`
+/// by the value taken from `U(gene-sigma, gene+sigma)`.
+///
+/// # Arguments:
+/// * `ind` - individual to be mutated.
+/// * `prob` - probability of mutation of single gene.
+/// * `sigma` - standard deviation of mutation.
+/// * `rng` - reference to pre-initialized RNG.
+#[allow(dead_code, unused_variables)]
+fn mutate_uniform<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: &mut R) {
+    let genes = ind.to_vec_mut().unwrap();
+    let sigma2 = sigma * 2f32;
+    for k in 0..genes.len() {
+        if rand::random::<f32>() < prob {
+            genes[k] += rng.gen::<f32>() * sigma2 - sigma;
+        }
+    }
+}
+
 //============================================
 
 #[cfg(test)]
-#[allow(unused_imports, unused_mut)]
+#[allow(unused_imports, unused_mut, unused_variables)]
 mod test {
     use rand;
     use rand::{StdRng, SeedableRng};
@@ -288,6 +311,37 @@ mod test {
     }
 
     #[test]
+    fn test_uniform_mutation() {
+        const SIZE: usize = 10;
+        const TRIALS: usize = 100;
+
+        let sqrt_trials = (TRIALS as f32).sqrt();
+        //        let mut rng = rand::thread_rng();
+        let mut rng = StdRng::from_seed(&[0 as usize]);
+        let mut sigma = 0f32;
+        for _ in 0..TRIALS {
+            while sigma <= 0.5f32 {
+                let mut p1 = RealCodedIndividual::new();
+                p1.genes = vec![0f32; SIZE];
+                mutate_uniform(&mut p1, 1f32, sigma, &mut rng);
+
+                let norm = dot(&p1.genes, &p1.genes);
+//                println!("{} : {}", norm, sigma*sigma);
+                assert!(norm <= sigma*sigma*(SIZE as f32));
+
+//                // TODO: improve the test by utilizing CLT.
+//                let max_dist = sqrt_trials * sigma;
+//                let (max_val, min_val) = (max(&p1.genes), min(&p1.genes));
+//                assert!(max_val <= 4f32 *max_dist);
+//                assert!(min_val >= -4f32*max_dist);
+//                assert!(max_val >= 4f32*sigma);
+//                assert!(min_val <= -4f32*sigma);
+                sigma += 0.1f32;
+            }
+        }
+    }
+
+    #[test]
     fn test_optimization_sphere() {
         let pop_size = 20u32;
         let problem_dim = 10u32;
@@ -296,6 +350,7 @@ mod test {
         let gen_count = 10u32;
         let mut settings = EASettings::new(pop_size, gen_count, problem_dim);
 //        settings.x_type = CrossoverOperator::Arithmetic;
+        settings.mut_type = MutationOperator::Uniform;
         let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
         let res = ga.run(settings).expect("Error during GA run");
         for k in 1..res.avg_fitness.len() {

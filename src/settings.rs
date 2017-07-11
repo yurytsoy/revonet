@@ -26,6 +26,8 @@ pub struct EASettings {
     /// Crossover parameter.
     pub x_alpha: f32,
     /// Mutation probability.
+    pub mut_type: MutationOperator,
+    /// Mutation probability.
     pub mut_prob: f32,
     /// Mutation parameter.
     pub mut_sigma: f32,
@@ -58,6 +60,7 @@ impl EASettings {
             x_type: CrossoverOperator::BlxAlpha,
             x_prob: 0.7f32,
             x_alpha: 0.1f32,
+            mut_type: MutationOperator::Gaussian,
             mut_prob: 1f32 / (param_count as f32),
             mut_sigma: 0.1f32,
         }
@@ -91,6 +94,16 @@ pub enum CrossoverOperator {
 //    SBX,
 }
 
+/// Enumeration for different types of mutation operators.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub enum MutationOperator {
+    /// Gaussian mutation. Genes are updated by random value taken from Normal distribution.
+    Gaussian,
+    /// Uniform mutation. Genes are updated by random value taken from uniform distribution.
+    Uniform,
+}
+
 //============================================================================================
 
 #[cfg(test)]
@@ -107,6 +120,7 @@ mod test {
         assert!(settings.gen_count == settings2.gen_count);
         assert!(settings.mut_prob == settings2.mut_prob);
         assert!(settings.mut_sigma == settings2.mut_sigma);
+        assert!(settings.mut_type == settings2.mut_type);
         assert!(settings.param_count == settings2.param_count);
         assert!(settings.pop_size == settings2.pop_size);
         assert!(settings.rng_seed == settings2.rng_seed);
