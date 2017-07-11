@@ -19,6 +19,8 @@ pub struct EASettings {
     ///
     /// If `true` then the best individual in current generation is copied to the next generation.
     pub use_elite: bool,
+    /// Type of the crossover.
+    pub x_type: CrossoverOperator,
     /// Crossover probability.
     pub x_prob: f32,
     /// Crossover parameter.
@@ -35,6 +37,7 @@ impl EASettings {
     /// The default values are as follows:
     /// * `tour_size = 3`
     /// * `use_elite = true`
+    /// * `x_type = CrossoverOperator::BlxAlpha`
     /// * `x_prob = 0.7f32`
     /// * `x_alpha = 0.1f32`
     /// * `mut_prob = 1f32 / param_count`
@@ -52,6 +55,7 @@ impl EASettings {
             gen_count: gen_count,
             tour_size: 3,
             use_elite: true,
+            x_type: CrossoverOperator::BlxAlpha,
             x_prob: 0.7f32,
             x_alpha: 0.1f32,
             mut_prob: 1f32 / (param_count as f32),
@@ -76,6 +80,17 @@ impl EASettings {
     }
 }
 
+/// Enumeration for the different types of crossover operators.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub enum CrossoverOperator {
+    /// Arithmetic crossover. Each child gene is randomly distributed between parent genes.
+    Arithmetic,
+    /// Child genes are picked from an expanded region containing genes of both parents.
+    BlxAlpha,
+//    SBX,
+}
+
 //============================================================================================
 
 #[cfg(test)]
@@ -97,6 +112,7 @@ mod test {
         assert!(settings.rng_seed == settings2.rng_seed);
         assert!(settings.tour_size == settings2.tour_size);
         assert!(settings.use_elite == settings2.use_elite);
+        assert!(settings.x_type == settings2.x_type);
         assert!(settings.x_alpha == settings2.x_alpha);
         assert!(settings.x_prob == settings2.x_prob);
     }

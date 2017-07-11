@@ -52,6 +52,7 @@ impl<T: NeuroProblem> Problem for T {
 #[allow(dead_code)]
 pub struct XorProblem {}
 
+#[allow(dead_code)]
 impl XorProblem {
     fn new() -> XorProblem {
         XorProblem{}
@@ -191,6 +192,7 @@ impl NeuroProblem for SymbolicRegressionProblem {
 //=========================================================
 
 #[cfg(test)]
+#[allow(unused_imports)]
 mod test {
     use rand;
 
