@@ -8,7 +8,7 @@ repository = "https://github.com/yurytsoy/revonet"
 homepage = "https://github.com/yurytsoy/revonet"
 readme = "README.md"
 
-keywords = ["genetic", "algorithm", "evolutionary", "neural", "networks", "neuroevolution"]
+keywords = ["genetic", "algorithm", "evolutionary", "neural", "neuroevolution"]
 categories = ["Algorithms", "Data structures"]
 
 
