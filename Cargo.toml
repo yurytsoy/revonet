@@ -5,7 +5,12 @@ authors = ["Yury Tsoy <yurytsoy@gmail.com>"]
 license = "GPL-3.0"
 description = "Rust implementation of real-coded genetic algorithm for solving optimization problems and training of neural networks. The latter is also known as neuroevolution."
 repository = "https://github.com/yurytsoy/revonet"
+homepage = "https://github.com/yurytsoy/revonet"
 readme = "README.md"
+
+keywords = ["genetic algorithm", "evolutionary algorithm", "neural networks", "neuroevolution"]
+categories = ["Algorithms", "Data structures"]
+
 
 [dependencies]
 rand = "0.3.0"
