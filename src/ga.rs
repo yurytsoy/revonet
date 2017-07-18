@@ -36,7 +36,7 @@ impl<'a, 'de, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned +
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
-        Ok(Rc::new(&(&self.ctx.as_ref().unwrap()).result))
+        Ok(Rc::new(&(&self.ctx.as_ref().expect("Empty EAContext")).result))
     }
 }
 
@@ -110,14 +110,14 @@ pub fn cross<R: Rng+Sized, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>,
 /// * `rng` - reference to pre-initialized RNG.
 #[allow(unused_variables)]
 fn cross_arithmetic<T: Individual, R: Rng+Sized>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut R) {
-    let p1_genes = p1.to_vec().unwrap();
-    let p2_genes = p2.to_vec().unwrap();
+    let p1_genes = p1.to_vec().expect("Can not extract vector of genes");
+    let p2_genes = p2.to_vec().expect("Can not extract vector of genes");
     // println!("{} : {}", p1_genes.len(), p2_genes.len());
     assert!(p1_genes.len() == p2_genes.len());
 
     let gene_count = p1_genes.len();
-    let c1_genes = c1.to_vec_mut().unwrap();
-    let c2_genes = c2.to_vec_mut().unwrap();
+    let c1_genes = c1.to_vec_mut().expect("Can not extract mutable vector of genes");
+    let c2_genes = c2.to_vec_mut().expect("Can not extract mutable vector of genes");
 
     for k in 0..gene_count {
         let a = rng.gen::<f32>();
@@ -136,14 +136,14 @@ fn cross_arithmetic<T: Individual, R: Rng+Sized>(p1: &T, p2: &T, c1: &mut T, c2:
 /// * `alpha` - parameter for crossover, controlling range of the child gene values.
 /// * `rng` - reference to pre-initialized RNG.
 fn cross_blx_alpha<T: Individual, R: Rng+Sized>(p1: &T, p2: &T, c1: &mut T, c2: &mut T, alpha: f32, mut rng: &mut R) {
-    let p1_genes = p1.to_vec().unwrap();
-    let p2_genes = p2.to_vec().unwrap();
+    let p1_genes = p1.to_vec().expect("Can not extract vector of genes");
+    let p2_genes = p2.to_vec().expect("Can not extract vector of genes");
     // println!("{} : {}", p1_genes.len(), p2_genes.len());
     assert!(p1_genes.len() == p2_genes.len());
 
     let gene_count = p1_genes.len();
-    let c1_genes = c1.to_vec_mut().unwrap();
-    let c2_genes = c2.to_vec_mut().unwrap();
+    let c1_genes = c1.to_vec_mut().expect("Can not extract mutable vector of genes");
+    let c2_genes = c2.to_vec_mut().expect("Can not extract mutable vector of genes");
 
     for k in 0..gene_count {
         let (min_gene, max_gene) = if p1_genes[k] > p2_genes[k] {(p2_genes[k], p1_genes[k])}
@@ -187,7 +187,7 @@ pub fn mutate<T: Individual, R: Rng>(children: &mut Vec<T>, mut_type: MutationOp
 /// * `rng` - reference to pre-initialized RNG.
 fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: &mut R) {
     let normal_rng = Normal::new(0.0, sigma as f64);
-    let genes = ind.to_vec_mut().unwrap();
+    let genes = ind.to_vec_mut().expect("Can not extract mutable vector of genes");
     for k in 0..genes.len() {
         if rand::random::<f32>() < prob {
             genes[k] += normal_rng.ind_sample(rng) as f32;
@@ -205,7 +205,7 @@ fn mutate_gauss<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: 
 /// * `rng` - reference to pre-initialized RNG.
 #[allow(dead_code, unused_variables)]
 fn mutate_uniform<T: Individual, R: Rng>(ind: &mut T, prob: f32, sigma: f32, rng: &mut R) {
-    let genes = ind.to_vec_mut().unwrap();
+    let genes = ind.to_vec_mut().expect("Can not extract mutable vector of genes");
     let sigma2 = sigma * 2f32;
     for k in 0..genes.len() {
         if rand::random::<f32>() < prob {

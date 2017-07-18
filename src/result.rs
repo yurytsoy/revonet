@@ -39,20 +39,19 @@ impl<'de, T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
     }
 
     pub fn from_json<'a>(filename: &str) -> Self {
-        let file = File::open(filename).unwrap();
+        let file = File::open(filename).expect("Can not open file");
         let mut buf_reader = BufReader::new(file);
         let mut json_str = String::new();
-        buf_reader.read_to_string(&mut json_str).unwrap();
+        buf_reader.read_to_string(&mut json_str).expect("Can not read file contents");
 
-        let res: EAResult<T> = serde_json::from_str(&json_str).unwrap();
-//        let res: EAResult<T> = serde_json::from_reader(buf_reader).unwrap();
+        let res: EAResult<T> = serde_json::from_str(&json_str).expect("Can not deserialize from json to EAResult");
         res.clone()
     }
 
     pub fn to_json(&self, filename: &str) {
-        let mut file = File::create(&filename).unwrap();
-        let json_str = serde_json::to_string(&self).unwrap();
-        file.write_all(json_str.as_bytes()).unwrap();
+        let mut file = File::create(&filename).expect("Can not open file");
+        let json_str = serde_json::to_string(&self).expect("Can not serialize to json from EAResult");
+        file.write_all(json_str.as_bytes()).expect("Can not write to file");
     }
 }
 

@@ -159,7 +159,7 @@ impl<'a, P: Problem, T: Individual+Clone+DeserializeOwned+Serialize> NE<'a, P, T
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
-        Ok(Rc::new(&(&self.ctx.as_ref().unwrap()).result))
+        Ok(Rc::new(&(&self.ctx.as_ref().expect("Empty EAContext")).result))
     }
 }
 
