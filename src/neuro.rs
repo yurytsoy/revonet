@@ -198,9 +198,11 @@ impl NeuralNetwork for MultilayeredNetwork {
         self.outputs_num
     }
     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
-        let mut input = Vec::from(xs);
+        // let mut input = Vec::from(xs);
+        let mut input = xs;
         for l in self.layers.iter_mut() {
-            input = l.compute(&input);
+            l.compute(input);
+            input = l.get_outputs();
         }
         Vec::from(input)
     }
@@ -267,19 +269,24 @@ impl NeuralLayer {
     }
 
     /// Compute output of the layer given a vector of input signals.
+    /// To get outputs use `get_outputs` function.
     ///
     /// # Arguments:
     /// * `xs` -- input vector.
-    pub fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
+    pub fn compute(&mut self, xs: &[f32]){
         self.outputs = dot_mv(&self.weights, &xs).iter().zip(self.biases.iter())
                             .map(|(&w, &b)| w+b)
                             .collect::<Vec<f32>>();
         compute_activations_inplace(&mut self.outputs, self.activation);
-        self.outputs.clone()
     }
 
     /// Return number of nodes in the layer.
     pub fn len(&self) -> usize {self.size}
+
+    /// Returns references to the slice, containing values of current outputs.
+    pub fn get_outputs(&self) -> &[f32] {
+        &self.outputs
+    }
 
     /// Return flattened vector of weights and biases.
     pub fn get_weights(&self) -> (Vec<f32>, Vec<f32>) {
