@@ -19,7 +19,7 @@ pub struct GA<'a, P: Problem + 'a, T: Individual+Serialize> {
     problem: &'a P,
 }
 
-impl<'a, 'de, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> GA<'a, P, T> {
+impl<'a, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> GA<'a, P, T> {
     /// Create a new GA instance for the given `problem`.
     pub fn new(problem: &'a P) -> GA<P, T> {
         GA{problem: problem,
@@ -45,14 +45,6 @@ impl<'a, P: Problem, T: Individual+Serialize> EA<'a, T> for GA<'a, P, T> {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
-
-    // fn get_context_mut(&mut self) -> &'a mut EAContext<T> {
-    //     match self.ctx.as_ref() {
-    //         Some(ctx) => {&mut ctx},
-    //         None => panic!("Context is empty")
-    //     }
-    //     // &mut self.ctx
-    // }
 }
 
 /// Function for crossing individuals to produce children.
@@ -73,7 +65,6 @@ pub fn cross<R: Rng+Sized, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>,
     if use_elite {
         children.push(get_best_individual(popul));
     }
-//    let func: fn(&SymbolicRegressionProblem, f32) -> f32
     let xfunc = match x_type {
         CrossoverOperator::Arithmetic => cross_arithmetic,
         CrossoverOperator::BlxAlpha => cross_blx_alpha,
@@ -90,7 +81,6 @@ pub fn cross<R: Rng+Sized, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>,
         let mut c2 = popul[sel_inds[p2]].clone();   // T::new();
         if rand::random::<f32>() < x_prob {
             xfunc(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha, rng);
-//            cross_blx_alpha(&popul[sel_inds[p1]], &popul[sel_inds[p2]], &mut c1, &mut c2, x_alpha, rng);
         }
         children.push(c1);
         children.push(c2);

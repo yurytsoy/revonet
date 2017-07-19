@@ -30,7 +30,7 @@ pub struct EAContext<T: Individual+Serialize> {
     pub rng: StdRng,
 }
 
-impl<'de, T: Individual+Clone+Serialize+DeserializeOwned> EAContext<T> {
+impl<T: Individual+Clone+Serialize+DeserializeOwned> EAContext<T> {
     /// Creates an EA context given current settings and reference to a problem. Also seeds RNG used
     /// in the EA.
     ///

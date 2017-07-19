@@ -25,7 +25,7 @@ pub struct EAResult<T: Individual> {
     pub fe_count: u32,
 }
 
-impl<'de, T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
+impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
     /// Initialize empty result structure.
     pub fn new() -> EAResult<T> {
         EAResult{avg_fitness: Vec::new(),
@@ -54,6 +54,38 @@ impl<'de, T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
         file.write_all(json_str.as_bytes()).expect("Can not write to file");
     }
 }
+
+/// Structure to hold results for multipole runs of evolutionary algorithm.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EAResultMultiple<T: Individual> {
+    /// Array of minimal absolute values of fitness for each generation.
+    pub min_fitness: Vec<f32>,
+    /// Array of maximal absolute values of fitness for each generation.
+    pub max_fitness: Vec<f32>,
+    /// Array of average absolute values of fitness for each generation.
+    pub avg_fitness_mean: Vec<f32>,
+    /// Array of SD for average absolute values of fitness for each generation.
+    pub avg_fitness_sd: Vec<f32>,
+    /// Best individual ever found during the single run.
+    pub best: T,
+    /// Mean number of function evaluations required to find the `best` individual.
+    pub best_fe_count_mean: u32,
+    /// SD for number of function evaluations required to find the `best` individual.
+    pub best_fe_count_sd: u32,
+    /// Mean number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
+    pub first_hit_fe_count_mean: u32,
+    /// SD for number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
+    pub first_hit_fe_count_sd: u32,
+    /// Number of runs when solution was found.
+    pub success_count: u32,
+    /// Total number of runs which were performed in order to compute the statistics.
+    pub run_count: u32,
+}
+
+impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
+
+}
+
 
 //============================================================================================
 
