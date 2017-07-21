@@ -60,12 +60,38 @@ pub fn min(xs: &Vec<f32>) -> f32 {
     xs.into_iter().fold(xs[0], |res, &x| if res < x {res} else {x})
 }
 
+/// Computes element-wise min element for two given vectors and stores result in the first argument.
+///
+/// # Arguments:
+/// * `xs` - mutable reference to a vector, where result is also written.
+/// * `ys` - reference to a second argument vector.
+pub fn min_inplace_vv(xs: &mut[f32], ys: &[f32]) {
+    for k in 0..xs.len() {
+        if xs[k] > ys[k] {
+            xs[k] = ys[k];
+        }
+    }
+}
+
 /// Find maximal element in a given vector.
 ///
 /// # Arguments:
 /// * `xs` - reference to a vector.
 pub fn max(xs: &Vec<f32>) -> f32 {
     xs.into_iter().fold(xs[0], |res, &x| if res > x {res} else {x})
+}
+
+/// Computes element-wise max element for two given vectors and stores result in the first argument.
+///
+/// # Arguments:
+/// * `xs` - mutable reference to a vector, where result is also written.
+/// * `ys` - reference to a second argument vector.
+pub fn max_inplace_vv(xs: &mut[f32], ys: &[f32]) {
+    for k in 0..xs.len() {
+        if xs[k] < ys[k] {
+            xs[k] = ys[k];
+        }
+    }
 }
 
 /// Compute mean value for a given vector.
@@ -89,6 +115,47 @@ pub fn sub(xs: &[f32], ys: &[f32]) -> Vec<f32> {
     xs.iter().zip(ys.iter())
         .map(|(&x, &y)| x-y)
         .collect::<Vec<f32>>()
+}
+
+/// Inplace subtraction of vectors. Does `xs = xs - ys`.
+///
+/// # Arguments:
+/// * `xs` - mutable reference to a vector, minuend.
+/// * `ys` - reference to a vector, subtrahend.
+pub fn sub_inplace(xs: &mut [f32], ys: &[f32]) {
+    for k in 0..xs.len() {
+        xs[k] -= ys[k];
+    }
+}
+
+/// Accumulates element-wise addition of xs and ys.
+///
+/// # Arguments:
+/// * `xs` - reference to accumulator vector.
+/// * `ys` - rhs vector.
+pub fn acc(xs: &mut[f32], ys: &[f32]) {
+    for k in 0..xs.len() {
+        xs[k] += ys[k];
+    }
+}
+
+/// Inplace multiplication of vector by number. Result is stored in the argument vector.
+///
+/// # Arguments:
+/// * `xs` - reference to vector.
+/// * `ys` - multiplier.
+pub fn mul_inplace(xs: &mut[f32], a: f32) {
+    for k in 0..xs.len() {
+        xs[k] *= a;
+    }
+}
+
+/// Computes element-wise square for the given vector.
+///
+/// # Arguments:
+/// `xs` - reference to vector.
+pub fn sqr(xs: &[f32]) -> Vec<f32> {
+    xs.iter().map(|x| x*x).collect::<Vec<f32>>()
 }
 
 //=========================================================================

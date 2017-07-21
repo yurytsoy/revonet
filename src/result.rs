@@ -1,10 +1,13 @@
 use serde::de::{DeserializeOwned};
 use serde::ser::{Serialize};
 use serde_json;
+use std;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 
-use ea::Individual;
+use ea;
+use ea::*;
+use math::*;
 
 /// Structure to hold results for the genetic algorithm run.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -69,13 +72,13 @@ pub struct EAResultMultiple<T: Individual> {
     /// Best individual ever found during the single run.
     pub best: T,
     /// Mean number of function evaluations required to find the `best` individual.
-    pub best_fe_count_mean: u32,
+    pub best_fe_count_mean: f32,
     /// SD for number of function evaluations required to find the `best` individual.
-    pub best_fe_count_sd: u32,
+    pub best_fe_count_sd: f32,
     /// Mean number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
-    pub first_hit_fe_count_mean: u32,
+    pub first_hit_fe_count_mean: f32,
     /// SD for number of function evaluations required to find the solution according to the `OptProblem::is_solution` function.
-    pub first_hit_fe_count_sd: u32,
+    pub first_hit_fe_count_sd: f32,
     /// Number of runs when solution was found.
     pub success_count: u32,
     /// Total number of runs which were performed in order to compute the statistics.
@@ -83,8 +86,79 @@ pub struct EAResultMultiple<T: Individual> {
 }
 
 impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
+    pub fn new(rs: &[EAResult<T>]) -> EAResultMultiple<T> {
+        let run_count = rs.len();
+        let mut avg_fitness_mean = vec![0f32; run_count];
+        let mut avg_fitness_sd = vec![0f32; run_count];
+        let mut min_fitness = vec![std::f32::MAX; run_count];
+        let mut max_fitness = vec![std::f32::MIN; run_count];
+        let mut best_fe_count_mean = 0f32;
+        let mut best_fe_count_sd = 0f32;
+        let mut first_hit_fe_count_mean = 0f32;
+        let mut first_hit_fe_count_sd = 0f32;
+        let mut success_count = 0;
+        let mut best_fitness = std::f32::MAX;
+        let mut best_run_idx = std::usize::MAX;
 
-}
+        for k in 0..rs.len() {
+            acc(&mut avg_fitness_mean, &rs[k].avg_fitness);
+            acc(&mut avg_fitness_sd, &sqr(&rs[k].avg_fitness));
+            min_inplace_vv(&mut min_fitness, &rs[k].min_fitness);
+            max_inplace_vv(&mut max_fitness, &rs[k].max_fitness);
+
+            best_fe_count_mean += rs[k].best_fe_count as f32;
+            best_fe_count_sd += ((rs[k].best_fe_count) * (rs[k].best_fe_count)) as f32;
+            if rs[k].first_hit_fe_count > 0 {
+                first_hit_fe_count_mean += rs[k].first_hit_fe_count as f32;
+                first_hit_fe_count_sd += ((rs[k].first_hit_fe_count) * (rs[k].first_hit_fe_count)) as f32;
+                success_count += 1;
+            }
+
+            if rs[k].best.get_fitness() < best_fitness {
+                best_fitness = rs[k].best.get_fitness();
+                best_run_idx =  k;
+            }
+        }
+        mul_inplace(&mut avg_fitness_mean, 1f32/run_count as f32);
+        mul_inplace(&mut avg_fitness_sd, 1f32/run_count as f32);    // compute SD as: mean square  - squared mean
+        sub_inplace(&mut avg_fitness_sd, &sqr(&avg_fitness_mean));
+        best_fe_count_mean /= run_count as f32;
+        best_fe_count_sd = best_fe_count_sd / run_count as f32 - best_fe_count_mean*best_fe_count_mean;
+        if success_count > 0 {
+            first_hit_fe_count_mean /= success_count as f32;
+            first_hit_fe_count_sd = first_hit_fe_count_sd / success_count as f32 - first_hit_fe_count_mean * first_hit_fe_count_mean;
+        }
+
+        EAResultMultiple{
+            avg_fitness_mean: avg_fitness_mean,
+            avg_fitness_sd: avg_fitness_sd,
+            min_fitness: min_fitness,
+            max_fitness: max_fitness,
+            best: ea::Individual::clone(&rs[best_run_idx].best),
+            best_fe_count_mean: best_fe_count_mean,
+            best_fe_count_sd: best_fe_count_sd,
+            first_hit_fe_count_mean: first_hit_fe_count_mean,
+            first_hit_fe_count_sd: first_hit_fe_count_sd,
+            success_count: success_count,
+            run_count: run_count as u32,
+        }
+    }
+
+    pub fn from_json<'a>(filename: &str) -> Self {
+        let file = File::open(filename).expect("Can not open file");
+        let mut buf_reader = BufReader::new(file);
+        let mut json_str = String::new();
+        buf_reader.read_to_string(&mut json_str).expect("Can not read file contents");
+
+        let res: EAResultMultiple<T> = serde_json::from_str(&json_str).expect("Can not deserialize from json to EAResult");
+        res.clone()
+    }
+
+    pub fn to_json(&self, filename: &str) {
+        let mut file = File::create(&filename).expect("Can not open file");
+        let json_str = serde_json::to_string(&self).expect("Can not serialize to json from EAResult");
+        file.write_all(json_str.as_bytes()).expect("Can not write to file");
+    }}
 
 
 //============================================================================================
