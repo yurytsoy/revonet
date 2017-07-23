@@ -106,12 +106,32 @@ pub fn mean(xs: &Vec<f32>) -> f32 {
     }
 }
 
+/// Compute unbiased variance deviation for a given vector.
+///
+/// # Arguments:
+/// * `xs` - reference to a vector.
+pub fn var(xs: &Vec<f32>) -> f32 {
+    if xs.len() > 1 as usize {
+        let x_mean = mean(xs);
+        let x2_mean = mean(&sqr(xs));
+        let size = xs.len() as f32;
+        let res = (size / (size - 1f32)) * (x2_mean - x_mean * x_mean);
+        if res >= 0f32 {res}
+        else {0f32}
+    } else if xs.len() == 1 as usize {
+        0f32
+    } else {
+        std::f32::NAN
+    }
+}
+
 /// Subtraction of vectors. Does `xs - ys`.
 ///
 /// # Arguments:
 /// * `xs` - reference to a vector, minuend.
 /// * `ys` - reference to a vector, subtrahend.
 pub fn sub(xs: &[f32], ys: &[f32]) -> Vec<f32> {
+    assert!(xs.len() == ys.len());
     xs.iter().zip(ys.iter())
         .map(|(&x, &y)| x-y)
         .collect::<Vec<f32>>()
@@ -123,6 +143,7 @@ pub fn sub(xs: &[f32], ys: &[f32]) -> Vec<f32> {
 /// * `xs` - mutable reference to a vector, minuend.
 /// * `ys` - reference to a vector, subtrahend.
 pub fn sub_inplace(xs: &mut [f32], ys: &[f32]) {
+    assert!(xs.len() == ys.len());
     for k in 0..xs.len() {
         xs[k] -= ys[k];
     }
@@ -134,6 +155,7 @@ pub fn sub_inplace(xs: &mut [f32], ys: &[f32]) {
 /// * `xs` - reference to accumulator vector.
 /// * `ys` - rhs vector.
 pub fn acc(xs: &mut[f32], ys: &[f32]) {
+    assert!(xs.len() == ys.len());
     for k in 0..xs.len() {
         xs[k] += ys[k];
     }
@@ -163,6 +185,7 @@ pub fn sqr(xs: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use rand;
+    use rand::{StdRng, SeedableRng};
 
     use math::*;
 
@@ -223,12 +246,23 @@ mod tests {
             let dot_res = dot_mv(&x1s, &x2s);
             assert!(dot_res.len() == LEN2);
 
-            // println!("{:?}", dot_res);
             let mut res: Vec<f32> = Vec::with_capacity(LEN2);
             for k in 0..LEN2 {
                 res.push(dot(&x1s[k], &x2s) - dot_res[k]);
             }
             assert!(res.into_iter().all(|x| x == 0f32));
+        }
+    }
+
+    #[test]
+    fn test_var() {
+        const LEN: usize = 100;
+        let mut rng = StdRng::from_seed(&[0 as usize]);
+        for _ in 0..1000 {
+            let xs = rand_vector(LEN, &mut rng);
+            let var = var(&xs);
+            // println!("{}", var - 1f32/12f32);
+            assert!((var - 1f32/12f32).abs() <= 3e-2f32);
         }
     }
 }
