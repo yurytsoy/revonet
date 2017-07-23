@@ -87,11 +87,10 @@ pub struct EAResultMultiple<T: Individual> {
 
 impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
     pub fn new(rs: &[EAResult<T>]) -> EAResultMultiple<T> {
-        let run_count = rs.len();
-        let mut avg_fitness_mean = vec![0f32; run_count];
-        let mut avg_fitness_sd = vec![0f32; run_count];
-        let mut min_fitness = vec![std::f32::MAX; run_count];
-        let mut max_fitness = vec![std::f32::MIN; run_count];
+        let mut avg_fitness_mean: Vec<f32> = Vec::new();
+        let mut avg_fitness_sd: Vec<f32> = Vec::new();
+        let mut min_fitness: Vec<f32> = Vec::new();
+        let mut max_fitness: Vec<f32> = Vec::new();
         let mut best_fe_count_mean = 0f32;
         let mut best_fe_count_sd = 0f32;
         let mut first_hit_fe_count_mean = 0f32;
@@ -100,28 +99,38 @@ impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
         let mut best_fitness = std::f32::MAX;
         let mut best_run_idx = std::usize::MAX;
 
-        for k in 0..rs.len() {
-            acc(&mut avg_fitness_mean, &rs[k].avg_fitness);
-            acc(&mut avg_fitness_sd, &sqr(&rs[k].avg_fitness));
-            min_inplace_vv(&mut min_fitness, &rs[k].min_fitness);
-            max_inplace_vv(&mut max_fitness, &rs[k].max_fitness);
+        let run_count = rs.len();
+        for k in 0..run_count {
+            let cur_res = &rs[k];
+            if k != 0 {
+                acc(&mut avg_fitness_mean, &cur_res.avg_fitness);
+                acc(&mut avg_fitness_sd, &sqr(&cur_res.avg_fitness));
+                min_inplace_vv(&mut min_fitness, &cur_res.min_fitness);
+                max_inplace_vv(&mut max_fitness, &cur_res.max_fitness);
+            } else {
+                avg_fitness_mean = cur_res.avg_fitness.clone();
+                avg_fitness_sd = sqr(&cur_res.avg_fitness);
+                min_fitness = cur_res.min_fitness.clone();
+                max_fitness = cur_res.max_fitness.clone();
+            }
 
-            best_fe_count_mean += rs[k].best_fe_count as f32;
-            best_fe_count_sd += ((rs[k].best_fe_count) * (rs[k].best_fe_count)) as f32;
-            if rs[k].first_hit_fe_count > 0 {
-                first_hit_fe_count_mean += rs[k].first_hit_fe_count as f32;
-                first_hit_fe_count_sd += ((rs[k].first_hit_fe_count) * (rs[k].first_hit_fe_count)) as f32;
+            best_fe_count_mean += cur_res.best_fe_count as f32;
+            best_fe_count_sd += ((cur_res.best_fe_count) * (cur_res.best_fe_count)) as f32;
+            if cur_res.first_hit_fe_count > 0 {
+                first_hit_fe_count_mean += cur_res.first_hit_fe_count as f32;
+                first_hit_fe_count_sd += ((cur_res.first_hit_fe_count) * (cur_res.first_hit_fe_count)) as f32;
                 success_count += 1;
             }
 
             if rs[k].best.get_fitness() < best_fitness {
-                best_fitness = rs[k].best.get_fitness();
+                best_fitness = cur_res.best.get_fitness();
                 best_run_idx =  k;
             }
         }
         mul_inplace(&mut avg_fitness_mean, 1f32/run_count as f32);
         mul_inplace(&mut avg_fitness_sd, 1f32/run_count as f32);    // compute SD as: mean square  - squared mean
         sub_inplace(&mut avg_fitness_sd, &sqr(&avg_fitness_mean));
+        max_inplace_vv(&mut avg_fitness_sd, &vec![0f32; avg_fitness_mean.len()]);
         best_fe_count_mean /= run_count as f32;
         best_fe_count_sd = best_fe_count_sd / run_count as f32 - best_fe_count_mean*best_fe_count_mean;
         if success_count > 0 {
@@ -165,6 +174,7 @@ impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
 
 #[cfg(test)]
 mod test {
+    #[allow(unused_imports)]
     use ea::*;
     use ga::*;
     use problem::*;
@@ -172,7 +182,7 @@ mod test {
     use settings::*;
 
     #[test]
-    fn test_json() {
+    fn test_json_earesult() {
         let pop_size = 10u32;
         let problem_dim = 5u32;
         let problem = SphereProblem{};
@@ -190,5 +200,57 @@ mod test {
         assert!(res.fe_count == res2.fe_count);
         assert!(res.first_hit_fe_count == res2.first_hit_fe_count);
         assert!(res.best.fitness == res2.best.fitness);
+    }
+
+    #[test]
+    fn test_json_earesult_mult() {
+        let pop_size = 10u32;
+        let problem_dim = 5u32;
+        let problem = SphereProblem{};
+
+        let gen_count = 10u32;
+        let ress = (0..3).into_iter()
+            .map(|_ | {
+                let settings = EASettings::new(pop_size, gen_count, problem_dim);
+                let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+                ga.run(settings).expect("Error during GA run").clone()
+            })
+            .collect::<Vec<EAResult<RealCodedIndividual>>>();
+
+        let filename = "test_json_earesult_mult.json";
+        let res = EAResultMultiple::new(&ress);
+        res.to_json(&filename);
+
+        let res2: EAResultMultiple<RealCodedIndividual> = EAResultMultiple::from_json(&filename);
+        // assert!(res2.fe_count == res2.fe_count);
+        // assert!(res.first_hit_fe_count == res2.first_hit_fe_count);
+        // assert!(res.best.fitness == res2.best.fitness);
+    }
+
+    #[test]
+    fn test_earesult_mult() {
+        let pop_size = 10u32;
+        let problem_dim = 5u32;
+        let problem = SphereProblem{};
+
+        let gen_count = 10u32;
+        let ress = (0..3).into_iter()
+            .map(|_ | {
+                let settings = EASettings::new(pop_size, gen_count, problem_dim);
+                let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+                ga.run(settings).expect("Error during GA run").clone()
+            })
+            .collect::<Vec<EAResult<RealCodedIndividual>>>();
+
+        let filename = "test_json_earesult_mult.json";
+        let res = EAResultMultiple::new(&ress);
+        res.to_json(&filename);
+
+        assert!(res.run_count == 3);
+        assert!(res.min_fitness.len() == gen_count as usize);
+        assert!(res.min_fitness.iter().zip(res.max_fitness.iter()).all(|(&min_f, &max_f)| min_f <= max_f));
+        assert!(res.min_fitness.iter().zip(res.avg_fitness_mean.iter()).all(|(&min_f, &avg_f)| min_f <= avg_f));
+        assert!(res.avg_fitness_sd.iter().all(|&f| f >= 0f32));
+        assert!(res.min_fitness[(gen_count-1) as usize] == res.best.fitness);
     }
 }

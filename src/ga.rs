@@ -31,12 +31,13 @@ impl<'a, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> 
     ///
     /// # Arguments:
     /// * `settings` - `EASettings` object.
-    pub fn run(&'a mut self, settings: EASettings) -> Result<Rc<&EAResult<T>>, ()> {
+    pub fn run(&'a mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
-        Ok(Rc::new(&(&self.ctx.as_ref().expect("Empty EAContext")).result))
+        // Ok(Rc::new(&(&self.ctx.as_ref().expect("Empty EAContext")).result))
+        Ok(&(&self.ctx.as_ref().expect("Empty EAContext")).result)
     }
 }
 
