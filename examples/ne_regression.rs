@@ -1,5 +1,6 @@
 extern crate revonet;
 
+use revonet::ea::*;
 use revonet::ne::*;
 use revonet::neproblem::*;
 use revonet::settings::*;

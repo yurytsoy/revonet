@@ -20,6 +20,11 @@ let res = ga.run(settings).expect("Error during GA run");  // run and fetch the 
 
 // get and print results of the current run.
 println!("\n\nGA results: {:?}", res);
+
+// make multiple runs and get combined results.
+let res = ga.run_multiple(settings, 10 as u32).expect("Error during multiple GA runs");
+println!("\n\nResults of multple GA runs: {:?}", res);
+
 ```
 
 ### Run evolution of NN weights to solve regression problem

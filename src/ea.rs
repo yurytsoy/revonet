@@ -1,5 +1,6 @@
 use rand::{Rng};
 use rand::distributions::{IndependentSample, Range};
+use serde::de::{DeserializeOwned};
 use serde::ser::Serialize;
 use std;
 
@@ -7,6 +8,8 @@ use context::*;
 use math::*;
 use neuro::{MultilayeredNetwork};
 use problem::*;
+use result::*;
+use settings::*;
 
 /// Trait representing functionality required to evolve an individual for optimization
 /// and NN tuning tasks.
@@ -22,8 +25,6 @@ pub trait Individual{
     /// * `size` - number of genes.
     /// * `rng` - mutable reference to the external RNG.
     fn init<R: Rng>(&mut self, size: usize, &mut R);
-    /// Create a copy of an individual.
-    fn clone(&self) -> Self;
     /// Return current fitness value.
     fn get_fitness(&self) -> f32;
     /// Update fitness value.
@@ -64,10 +65,6 @@ impl Individual for RealCodedIndividual{
         self.genes = rand_vector_std_gauss(size as usize, rng);
     }
 
-    fn clone(&self) -> Self {
-        RealCodedIndividual{genes: self.genes.clone(), fitness: self.fitness}
-    }
-
     fn get_fitness(&self) -> f32 {
         self.fitness
     }
@@ -90,7 +87,17 @@ impl Individual for RealCodedIndividual{
 /// Trait for an evolutionary algorithm.
 /// Defines functions which are typical for running a common EA.
 /// To implement a trait a function `breed` should be implemented.
-pub trait EA<'a, T: Individual+Serialize> {
+pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
+    fn run_multiple(&mut self, settings: EASettings, run_num: u32) -> Result<EAResultMultiple<T>, ()> {
+        let run_ress = (0..run_num).into_iter()
+                            .map(|_| {
+                                self.run(settings.clone()).expect("Error during GA run").clone()
+                            })
+                            .collect::<Vec<EAResult<T>>>();
+        let res = EAResultMultiple::new(&run_ress);
+        Ok(res)
+    }
+
     /// "Main" function for the EA which runs a cycle for an evolutionary search.
     ///
     /// # Arguments:
@@ -198,6 +205,12 @@ pub trait EA<'a, T: Individual+Serialize> {
     /// * `sel_inds` - vector of indices of individuals from `ctx.population` selected for breeding.
     /// * `children` - reference to the container to store resulting children individuals.
     fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>);
+
+    /// Run evolutionary algorithm and return `EAResult` object.
+    ///
+    /// # Arguments:
+    /// * `settings` - `EASettings` object.
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()>;
 }
 
 /// Creates population of given size. Uses `problem.get_random_individual` to generate a
@@ -243,7 +256,7 @@ fn select_tournament(fits: &Vec<f32>, tour_size: u32, mut rng: &mut Rng) -> Vec<
 ///
 /// # Arguments:
 /// * `popul` - vector of individuals to select from.
-pub fn get_best_individual<T: Individual>(popul: &Vec<T>) -> T {
+pub fn get_best_individual<T: Individual+Clone>(popul: &Vec<T>) -> T {
     let min_fitness = popul.into_iter().fold(std::f32::MAX, |s, ref ind| if s < ind.get_fitness() {s} else {ind.get_fitness()});
     let idx = popul.into_iter().position(|ref x| x.get_fitness() == min_fitness).expect("Min fitness is not found");
     popul[idx].clone()

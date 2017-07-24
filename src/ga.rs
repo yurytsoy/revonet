@@ -3,7 +3,6 @@ use rand::{Rng};
 use rand::distributions::{Normal, IndependentSample, Range};
 use serde::de::{DeserializeOwned};
 use serde::ser::Serialize;
-use std::rc::Rc;
 
 use context::*;
 use ea::*;
@@ -26,25 +25,20 @@ impl<'a, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> 
            ctx: None,
         }
     }
+}
 
-    /// Main entry point for the GA. Runs GA with given `settings` and returns `EAResult` object.
-    ///
-    /// # Arguments:
-    /// * `settings` - `EASettings` object.
-    pub fn run(&'a mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
+impl<'a, P: Problem, T: Individual+Clone+Serialize+DeserializeOwned> EA<'a, T> for GA<'a, P, T> {
+    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
+        cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
+    }
+
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
-        // Ok(Rc::new(&(&self.ctx.as_ref().expect("Empty EAContext")).result))
         Ok(&(&self.ctx.as_ref().expect("Empty EAContext")).result)
-    }
-}
-
-impl<'a, P: Problem, T: Individual+Serialize> EA<'a, T> for GA<'a, P, T> {
-    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
-        cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 }
 
@@ -61,7 +55,7 @@ impl<'a, P: Problem, T: Individual+Serialize> EA<'a, T> for GA<'a, P, T> {
 ///              no crossing is performed and children are simply copy of selected parents.
 /// * `x_alpha` - parameter for a crossover operator.
 /// * `rng` - reference to pre-initialized RNG.
-pub fn cross<R: Rng+Sized, T: Individual>(popul: &Vec<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>, use_elite: bool, x_type: CrossoverOperator, x_prob: f32, x_alpha: f32, mut rng: &mut R) {
+pub fn cross<R: Rng+Sized, T: Individual+Clone>(popul: &Vec<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>, use_elite: bool, x_type: CrossoverOperator, x_prob: f32, x_alpha: f32, mut rng: &mut R) {
     let range = Range::new(0, popul.len());
     if use_elite {
         children.push(get_best_individual(popul));
@@ -347,5 +341,22 @@ mod test {
         for k in 1..res.avg_fitness.len() {
             assert!(res.avg_fitness[k-1] >= res.avg_fitness[k]);
         }
+    }
+
+    #[test]
+    fn test_multi_optimization_sphere() {
+        let runs_num = 5u32;
+        let pop_size = 20u32;
+        let problem_dim = 10u32;
+        let problem = SphereProblem{};
+
+        let gen_count = 10u32;
+        let mut settings = EASettings::new(pop_size, gen_count, problem_dim);
+        settings.mut_type = MutationOperator::Uniform;
+        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let res = ga.run_multiple(settings, runs_num).expect("No results from multiple runs");
+        // println!("{:?}", res);
+
+        assert!(res.run_count == runs_num);
     }
 }

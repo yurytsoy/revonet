@@ -39,7 +39,6 @@ impl<'a> NEIndividual {
                     inputs_num = layer.len();
                 }
                 // biases.
-                // cur_idx = 0;
                 for layer in net.iter_layers() {
                     // println!("getting slice for biases {}..{}", cur_idx, (cur_idx + layer.len()));
                     bs.push(Vec::from(&self.genes[cur_idx..(cur_idx + layer.len())]));
@@ -65,21 +64,6 @@ impl Individual for NEIndividual {
 
     fn init<R: Rng>(&mut self, size: usize, mut rng: &mut R) {
         self.genes = rand_vector_std_gauss(size as usize, rng);
-    }
-
-    fn clone(&self) -> Self {
-        // println!("Cloning NE individual");
-        NEIndividual{
-            genes: self.genes.clone(),
-            fitness: self.fitness,
-            network: match &self.network {
-                &Some(ref x) => Some(x.clone()),
-                &None => {
-                    println!("[clone] Warning: cloned individual has empty NN");
-                    None
-                }
-            }
-        }
     }
 
     fn get_fitness(&self) -> f32 {
@@ -148,24 +132,20 @@ impl<'a, P: Problem, T: Individual+Clone+DeserializeOwned+Serialize> NE<'a, P, T
            ctx: None,
         }
     }
+}
 
-    /// Run evolution of neural networks and return `EAResult` object.
-    ///
-    /// # Arguments:
-    /// * `settings` - `EASettings` object.
-    pub fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
+impl<'a, T: Individual+Clone+Serialize+DeserializeOwned, P: Problem> EA<'a, T> for NE<'a, P, T> {
+    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
+        cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
+        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
+    }
+
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
         self.ctx = Some(ctx);
         Ok(&(&self.ctx.as_ref().expect("Empty EAContext")).result)
-    }
-}
-
-impl<'a, T: Individual+Serialize+Deserialize<'a>, P: Problem> EA<'a, T> for NE<'a, P, T> {
-    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
-        cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
-        mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 }
 

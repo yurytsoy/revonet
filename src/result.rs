@@ -5,7 +5,7 @@ use std;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 
-use ea;
+// use ea;
 use ea::*;
 use math::*;
 
@@ -138,12 +138,13 @@ impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
             first_hit_fe_count_sd = first_hit_fe_count_sd / success_count as f32 - first_hit_fe_count_mean * first_hit_fe_count_mean;
         }
 
-        EAResultMultiple{
+        EAResultMultiple::<T>{
             avg_fitness_mean: avg_fitness_mean,
             avg_fitness_sd: avg_fitness_sd,
             min_fitness: min_fitness,
             max_fitness: max_fitness,
-            best: ea::Individual::clone(&rs[best_run_idx].best),
+            // best: ea::Individual::clone(&rs[best_run_idx].best),
+            best: rs[best_run_idx].best.clone(),
             best_fe_count_mean: best_fe_count_mean,
             best_fe_count_sd: best_fe_count_sd,
             first_hit_fe_count_mean: first_hit_fe_count_mean,
