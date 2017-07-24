@@ -222,9 +222,18 @@ mod test {
         res.to_json(&filename);
 
         let res2: EAResultMultiple<RealCodedIndividual> = EAResultMultiple::from_json(&filename);
-        // assert!(res2.fe_count == res2.fe_count);
-        // assert!(res.first_hit_fe_count == res2.first_hit_fe_count);
-        // assert!(res.best.fitness == res2.best.fitness);
+        assert!(res.run_count == res2.run_count);
+        assert!(res.success_count == res2.success_count);
+        assert!(res.first_hit_fe_count_mean == res2.first_hit_fe_count_mean);
+        assert!(res.first_hit_fe_count_sd == res2.first_hit_fe_count_sd);
+        assert!(res.best_fe_count_mean == res2.best_fe_count_mean);
+        assert!(res.best_fe_count_sd == res2.best_fe_count_sd);
+        assert!(res.best.fitness == res2.best.fitness);
+        assert!(res.best.genes == res2.best.genes);
+        assert!(res.min_fitness == res2.min_fitness);
+        assert!(res.max_fitness == res2.max_fitness);
+        assert!(res.avg_fitness_mean == res2.avg_fitness_mean);
+        assert!(res.avg_fitness_sd == res2.avg_fitness_sd);
     }
 
     #[test]
