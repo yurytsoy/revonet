@@ -117,30 +117,32 @@ impl Individual for NEIndividual {
 //================================================================================
 
 /// Structure for neuroevolutionary algorithm.
-pub struct NE<'a, P: Problem + 'a, T: Individual+Deserialize<'a>+Serialize> {
+pub struct NE<'a, P: Problem + 'a> {
     /// Context structure containing information about GA run, its progress and results.
-    ctx: Option<EAContext<T>>,
+    ctx: Option<EAContext<NEIndividual>>,
     /// Reference to the objective function object implementing `Problem` trait.
     problem: &'a P,
 }
 
 #[allow(dead_code)]
-impl<'a, P: Problem, T: Individual+Clone+DeserializeOwned+Serialize> NE<'a, P, T> {
+impl<'a, P: Problem> NE<'a, P> {
     /// Create a new neuroevolutionary algorithm for the given problem.
-    pub fn new(problem: &'a P) -> NE<'a, P, T> {
+    pub fn new(problem: &'a P) -> NE<'a, P> {
         NE {problem: problem,
            ctx: None,
         }
     }
 }
 
-impl<'a, T: Individual+Clone+Serialize+DeserializeOwned, P: Problem> EA<'a, T> for NE<'a, P, T> {
-    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
+impl<'a, P: Problem> EA<'a> for NE<'a, P> {
+    type IndType = NEIndividual;
+
+    fn breed(&self, ctx: &mut EAContext<Self::IndType>, sel_inds: &Vec<usize>, children: &mut Vec<Self::IndType>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 
-    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
@@ -166,7 +168,7 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = SymbolicRegressionProblem::new_f();
 
-        let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+        let mut ne: NE<SymbolicRegressionProblem> = NE::new(&problem);
         let res = ne.run(settings).expect("Error: NE result is empty");
         println!("result: {:?}", res);
         println!("\nbest individual: {:?}", res.best);

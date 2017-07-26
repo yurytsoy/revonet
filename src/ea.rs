@@ -87,13 +87,15 @@ impl Individual for RealCodedIndividual{
 /// Trait for an evolutionary algorithm.
 /// Defines functions which are typical for running a common EA.
 /// To implement a trait a function `breed` should be implemented.
-pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
-    fn run_multiple(&mut self, settings: EASettings, run_num: u32) -> Result<EAResultMultiple<T>, ()> {
+pub trait EA<'a> {
+    type IndType: Individual+Clone+Serialize+DeserializeOwned;
+
+    fn run_multiple(&mut self, settings: EASettings, run_num: u32) -> Result<EAResultMultiple<Self::IndType>, ()> {
         let run_ress = (0..run_num).into_iter()
                             .map(|_| {
                                 self.run(settings.clone()).expect("Error during GA run").clone()
                             })
-                            .collect::<Vec<EAResult<T>>>();
+                            .collect::<Vec<EAResult<Self::IndType>>>();
         let res = EAResultMultiple::new(&run_ress);
         Ok(res)
     }
@@ -104,7 +106,7 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `problem` - reference to the `Problem` trait which specifies an objective function.
     /// * `gen_count` - number of generations (iterations) for search.
-    fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
+    fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<Self::IndType>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
         // let mut ctx = self.get_context_mut();
         // println!("run_with_context");
         for t in 0..gen_count {
@@ -118,7 +120,7 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
 
             // crossover
             // println!("crossover");
-            let mut children: Vec<T> = Vec::with_capacity(ctx.settings.pop_size as usize);
+            let mut children: Vec<Self::IndType> = Vec::with_capacity(ctx.settings.pop_size as usize);
             self.breed(ctx, &sel_inds,  &mut children);
 
             // next gen
@@ -138,13 +140,13 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
     /// # Arguments:
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `problem` - reference to the `Problem` trait which specifies an objective function.
-    fn evaluate<P: Problem>(&self, ctx: &mut EAContext<T>, problem: &P) {
+    fn evaluate<P: Problem>(&self, ctx: &mut EAContext<Self::IndType>, problem: &P) {
         // ctx.fitness = evaluate(&mut ctx.population, problem, &mut ctx.result);
         let cur_result = &mut ctx.result;
         let popul = &mut ctx.population;
 
         ctx.fitness = popul.iter_mut().map(|ref mut ind| {
-                let f = problem.compute(ind as &mut T);
+                let f = problem.compute(ind as &mut Self::IndType);
                 // println!(".");
                 ind.set_fitness(f);
                 f
@@ -178,7 +180,7 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
     ///
     /// # Arguments:
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
-    fn select(&self, ctx: &mut EAContext<T>) -> Vec<usize> {
+    fn select(&self, ctx: &mut EAContext<Self::IndType>) -> Vec<usize> {
         select_tournament(&ctx.fitness, ctx.settings.tour_size, &mut ctx.rng)
     }
 
@@ -189,7 +191,7 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `children` - reference to the vector of children individuals which should
     ///                get to the next generation.
-    fn next_generation(&self, ctx: &mut EAContext<T>, children: &Vec<T>) {
+    fn next_generation(&self, ctx: &mut EAContext<Self::IndType>, children: &Vec<Self::IndType>) {
         ctx.population = Vec::with_capacity(children.len());
         for k in 0..children.len() {
             ctx.population.push(children[k].clone());
@@ -204,13 +206,13 @@ pub trait EA<'a, T: Individual+Clone+Serialize+DeserializeOwned> {
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `sel_inds` - vector of indices of individuals from `ctx.population` selected for breeding.
     /// * `children` - reference to the container to store resulting children individuals.
-    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>);
+    fn breed(&self, ctx: &mut EAContext<Self::IndType>, sel_inds: &Vec<usize>, children: &mut Vec<Self::IndType>);
 
     /// Run evolutionary algorithm and return `EAResult` object.
     ///
     /// # Arguments:
     /// * `settings` - `EASettings` object.
-    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()>;
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()>;
 }
 
 /// Creates population of given size. Uses `problem.get_random_individual` to generate a

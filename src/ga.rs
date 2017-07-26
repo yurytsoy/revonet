@@ -11,29 +11,31 @@ use result::*;
 use settings::*;
 
 /// Baseline structure for [Genetic Algorithm](https://en.wikipedia.org/wiki/Genetic_algorithm)
-pub struct GA<'a, P: Problem + 'a, T: Individual+Serialize> {
+pub struct GA<'a, P: Problem + 'a> {
     /// Context structure containing information about GA run, its progress and results.
-    ctx: Option<EAContext<T>>,
+    ctx: Option<EAContext<RealCodedIndividual>>,
     /// Reference to the objective function object implementing `Problem` trait.
     problem: &'a P,
 }
 
-impl<'a, P: Problem, T: Individual + Clone + Serialize + DeserializeOwned + 'a> GA<'a, P, T> {
+impl<'a, P: Problem> GA<'a, P> {
     /// Create a new GA instance for the given `problem`.
-    pub fn new(problem: &'a P) -> GA<P, T> {
+    pub fn new(problem: &'a P) -> GA<P> {
         GA{problem: problem,
            ctx: None,
         }
     }
 }
 
-impl<'a, P: Problem, T: Individual+Clone+Serialize+DeserializeOwned> EA<'a, T> for GA<'a, P, T> {
-    fn breed(&self, ctx: &mut EAContext<T>, sel_inds: &Vec<usize>, children: &mut Vec<T>) {
+impl<'a, P: Problem> EA<'a> for GA<'a, P> {
+    type IndType = RealCodedIndividual;
+
+    fn breed(&self, ctx: &mut EAContext<Self::IndType>, sel_inds: &Vec<usize>, children: &mut Vec<Self::IndType>) {
         cross(&ctx.population, sel_inds, children, ctx.settings.use_elite, ctx.settings.x_type, ctx.settings.x_prob, ctx.settings.x_alpha, &mut ctx.rng);
         mutate(children, ctx.settings.mut_type, ctx.settings.mut_prob, ctx.settings.mut_sigma, &mut ctx.rng);
     }
 
-    fn run(&mut self, settings: EASettings) -> Result<&EAResult<T>, ()> {
+    fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()> {
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
@@ -311,7 +313,6 @@ mod test {
                 mutate_uniform(&mut p1, 1f32, sigma, &mut rng);
 
                 let norm = dot(&p1.genes, &p1.genes);
-//                println!("{} : {}", norm, sigma*sigma);
                 assert!(norm <= sigma*sigma*(SIZE as f32));
 
 //                // TODO: improve the test by utilizing CLT.
@@ -336,7 +337,7 @@ mod test {
         let mut settings = EASettings::new(pop_size, gen_count, problem_dim);
 //        settings.x_type = CrossoverOperator::Arithmetic;
         settings.mut_type = MutationOperator::Uniform;
-        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let mut ga: GA<SphereProblem> = GA::new(&problem);
         let res = ga.run(settings).expect("Error during GA run");
         for k in 1..res.avg_fitness.len() {
             assert!(res.avg_fitness[k-1] >= res.avg_fitness[k]);
@@ -353,7 +354,7 @@ mod test {
         let gen_count = 10u32;
         let mut settings = EASettings::new(pop_size, gen_count, problem_dim);
         settings.mut_type = MutationOperator::Uniform;
-        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let mut ga: GA<SphereProblem> = GA::new(&problem);
         let res = ga.run_multiple(settings, runs_num).expect("No results from multiple runs");
         // println!("{:?}", res);
 

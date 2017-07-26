@@ -15,7 +15,7 @@ let problem_dim = 10u32;    // number of optimization parameters.
 let problem = RosenbrockProblem{};  // objective function.
 let gen_count = 10u32;      // generations number.
 let settings = GASettings::new(pop_size, gen_count, problem_dim);
-let mut ga = GA::new(settings, &problem);   // init GA.
+let mut ga: GA<RosenbrockProblem> = GA::new(settings, &problem);   // init GA.
 let res = ga.run(settings).expect("Error during GA run");  // run and fetch the results.
 
 // get and print results of the current run.
@@ -34,7 +34,7 @@ let (pop_size, gen_count, param_count) = (20, 20, 100); // gene_count does not m
 let settings = EASettings::new(pop_size, gen_count, param_count);
 let problem = SymbolicRegressionProblem::new_f();
 
-let mut ne: NE<SymbolicRegressionProblem, NEIndividual> = NE::new(&problem);
+let mut ne: NE<SymbolicRegressionProblem> = NE::new(&problem);
 let res = ne.run(settings).expect("Error: NE result is empty");
 println!("result: {:?}", res);
 println!("\nbest individual: {:?}", res.best);

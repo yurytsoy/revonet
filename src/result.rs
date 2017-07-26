@@ -190,7 +190,7 @@ mod test {
 
         let gen_count = 10u32;
         let settings = EASettings::new(pop_size, gen_count, problem_dim);
-        let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+        let mut ga: GA<SphereProblem> = GA::new(&problem);
         let res = ga.run(settings).expect("Error during GA run");
 
         let filename = "test_json_earesult.json";
@@ -213,7 +213,7 @@ mod test {
         let ress = (0..3).into_iter()
             .map(|_ | {
                 let settings = EASettings::new(pop_size, gen_count, problem_dim);
-                let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+                let mut ga: GA<SphereProblem> = GA::new(&problem);
                 ga.run(settings).expect("Error during GA run").clone()
             })
             .collect::<Vec<EAResult<RealCodedIndividual>>>();
@@ -247,7 +247,7 @@ mod test {
         let ress = (0..3).into_iter()
             .map(|_ | {
                 let settings = EASettings::new(pop_size, gen_count, problem_dim);
-                let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+                let mut ga: GA<SphereProblem> = GA::new(&problem);
                 ga.run(settings).expect("Error during GA run").clone()
             })
             .collect::<Vec<EAResult<RealCodedIndividual>>>();

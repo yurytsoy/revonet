@@ -208,7 +208,7 @@ mod test {
         let settings = EASettings::new(pop_size, gen_count, param_count);
         let problem = XorProblem::new();
 
-        let mut ne: NE<XorProblem, NEIndividual> = NE::new(&problem);
+        let mut ne: NE<XorProblem> = NE::new(&problem);
         let res = ne.run(settings).expect("Error: NE result is empty");
         println!("result: {:?}", res);
         println!("\nbest individual: {:?}", res.best);

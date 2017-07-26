@@ -15,7 +15,7 @@ fn main() {
 
     let gen_count = 10u32;
     let settings = EASettings::new(pop_size, gen_count, problem_dim);
-    let mut ga: GA<SphereProblem, RealCodedIndividual> = GA::new(&problem);
+    let mut ga: GA<SphereProblem> = GA::new(&problem);
     let res = ga.run(settings).expect("Error during GA run");
     println!("\n\nGA results: {:?}", res);
 }
