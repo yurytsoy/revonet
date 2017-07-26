@@ -2,8 +2,6 @@
 
 Rust implementation of real-coded genetic algorithm for solving optimization problems and training of neural networks. The latter is also known as neuroevolution.
 
-This is an exercise project to get the hang of Rust and possibly do something useful. As my knowledge of Rust is quite limited, the code is far from perfection and any advice is very appreciated.
-
 # Examples
 
 ### Real-coded genetic algorithm
