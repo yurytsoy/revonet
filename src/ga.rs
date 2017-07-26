@@ -1,14 +1,13 @@
 use rand;
 use rand::{Rng};
 use rand::distributions::{Normal, IndependentSample, Range};
-use serde::de::{DeserializeOwned};
-use serde::ser::Serialize;
 
 use context::*;
 use ea::*;
 use problem::*;
 use result::*;
 use settings::*;
+
 
 /// Baseline structure for [Genetic Algorithm](https://en.wikipedia.org/wiki/Genetic_algorithm)
 pub struct GA<'a, P: Problem + 'a> {

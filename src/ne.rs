@@ -1,6 +1,4 @@
 use rand::{Rng};
-use serde::de::{Deserialize, DeserializeOwned};
-use serde::ser::Serialize;
 use std;
 
 use context::*;
@@ -11,6 +9,7 @@ use neuro::*;
 use problem::*;
 use result::*;
 use settings::*;
+
 
 /// Represents individual for neuroevolution. The main difference is that the NE individual also
 /// has a `network` field, which stores current neural network.

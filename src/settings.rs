@@ -2,6 +2,9 @@ use serde_json;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 
+use ::*;
+
+
 /// Settings for evolutionary algorithm.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EASettings {
@@ -82,6 +85,11 @@ impl EASettings {
         file.write_all(json_str.as_bytes()).expect("Can not write to file");
     }
 }
+
+impl Jsonable for EASettings {
+    type T = Self;
+}
+
 
 /// Enumeration for the different types of crossover operators.
 #[allow(dead_code)]

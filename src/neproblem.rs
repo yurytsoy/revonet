@@ -5,6 +5,7 @@ use ea::*;
 use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};
 use problem::*;
 
+
 //--------------------------------------------
 
 /// Trait for problem where NN is a solution.

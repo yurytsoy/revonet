@@ -1,6 +1,6 @@
 [package]
 name = "revonet"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Yury Tsoy <yurytsoy@gmail.com>"]
 license = "GPL-3.0"
 description = "Rust implementation of real-coded genetic algorithm for solving optimization problems and training of neural networks. The latter is also known as neuroevolution."

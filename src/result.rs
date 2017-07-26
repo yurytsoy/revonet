@@ -1,13 +1,7 @@
-use serde::de::{DeserializeOwned};
-use serde::ser::{Serialize};
-use serde_json;
-use std;
-use std::fs::File;
-use std::io::{BufReader, Read, Write};
-
-// use ea;
+use ::*;
 use ea::*;
 use math::*;
+
 
 /// Structure to hold results for the genetic algorithm run.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -28,7 +22,7 @@ pub struct EAResult<T: Individual> {
     pub fe_count: u32,
 }
 
-impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
+impl<T: Individual> EAResult<T> {
     /// Initialize empty result structure.
     pub fn new() -> EAResult<T> {
         EAResult{avg_fitness: Vec::new(),
@@ -40,22 +34,10 @@ impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResult<T> {
                  fe_count: 0,
                  }
     }
+}
 
-    pub fn from_json<'a>(filename: &str) -> Self {
-        let file = File::open(filename).expect("Can not open file");
-        let mut buf_reader = BufReader::new(file);
-        let mut json_str = String::new();
-        buf_reader.read_to_string(&mut json_str).expect("Can not read file contents");
-
-        let res: EAResult<T> = serde_json::from_str(&json_str).expect("Can not deserialize from json to EAResult");
-        res.clone()
-    }
-
-    pub fn to_json(&self, filename: &str) {
-        let mut file = File::create(&filename).expect("Can not open file");
-        let json_str = serde_json::to_string(&self).expect("Can not serialize to json from EAResult");
-        file.write_all(json_str.as_bytes()).expect("Can not write to file");
-    }
+impl<T: Individual+Clone+DeserializeOwned+Serialize> Jsonable for EAResult<T> {
+    type T = Self;
 }
 
 /// Structure to hold results for multipole runs of evolutionary algorithm.
@@ -85,7 +67,7 @@ pub struct EAResultMultiple<T: Individual> {
     pub run_count: u32,
 }
 
-impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
+impl<T: Individual+Clone> EAResultMultiple<T> {
     pub fn new(rs: &[EAResult<T>]) -> EAResultMultiple<T> {
         let mut avg_fitness_mean: Vec<f32> = Vec::new();
         let mut avg_fitness_sd: Vec<f32> = Vec::new();
@@ -153,22 +135,11 @@ impl<T: Individual+Clone+DeserializeOwned+Serialize> EAResultMultiple<T> {
             run_count: run_count as u32,
         }
     }
+}
 
-    pub fn from_json<'a>(filename: &str) -> Self {
-        let file = File::open(filename).expect("Can not open file");
-        let mut buf_reader = BufReader::new(file);
-        let mut json_str = String::new();
-        buf_reader.read_to_string(&mut json_str).expect("Can not read file contents");
-
-        let res: EAResultMultiple<T> = serde_json::from_str(&json_str).expect("Can not deserialize from json to EAResult");
-        res.clone()
-    }
-
-    pub fn to_json(&self, filename: &str) {
-        let mut file = File::create(&filename).expect("Can not open file");
-        let json_str = serde_json::to_string(&self).expect("Can not serialize to json from EAResult");
-        file.write_all(json_str.as_bytes()).expect("Can not write to file");
-    }}
+impl<T: Individual+Clone+DeserializeOwned+Serialize> Jsonable for EAResultMultiple<T> {
+    type T = Self;
+}
 
 
 //============================================================================================

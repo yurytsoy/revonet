@@ -11,6 +11,7 @@ use problem::*;
 use result::*;
 use settings::*;
 
+
 /// Trait representing functionality required to evolve an individual for optimization
 /// and NN tuning tasks.
 ///
