@@ -88,7 +88,7 @@ impl Individual for RealCodedIndividual{
 /// Trait for an evolutionary algorithm.
 /// Defines functions which are typical for running a common EA.
 /// To implement a trait a function `breed` should be implemented.
-pub trait EA<'a> {
+pub trait EA<'a, P> where P: Problem {
     type IndType: Individual+Clone+Serialize+DeserializeOwned;
 
     fn run_multiple(&mut self, settings: EASettings, run_num: u32) -> Result<EAResultMultiple<Self::IndType>, ()> {
@@ -107,7 +107,7 @@ pub trait EA<'a> {
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `problem` - reference to the `Problem` trait which specifies an objective function.
     /// * `gen_count` - number of generations (iterations) for search.
-    fn run_with_context<P: Problem>(&self, ctx: &mut EAContext<Self::IndType>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
+    fn run_with_context(&self, ctx: &mut EAContext<Self::IndType>, problem: &P, gen_count: u32) { // -> Result<Rc<&'a EAResult<T>>, ()> {
         // let mut ctx = self.get_context_mut();
         // println!("run_with_context");
         for t in 0..gen_count {
@@ -141,7 +141,7 @@ pub trait EA<'a> {
     /// # Arguments:
     /// * `ctx` - `EAContext` object containing information regarding current EA run.
     /// * `problem` - reference to the `Problem` trait which specifies an objective function.
-    fn evaluate<P: Problem>(&self, ctx: &mut EAContext<Self::IndType>, problem: &P) {
+    fn evaluate(&self, ctx: &mut EAContext<Self::IndType>, problem: &P) {
         // ctx.fitness = evaluate(&mut ctx.population, problem, &mut ctx.result);
         let cur_result = &mut ctx.result;
         let popul = &mut ctx.population;
@@ -213,6 +213,7 @@ pub trait EA<'a> {
     ///
     /// # Arguments:
     /// * `settings` - `EASettings` object.
+    // fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()>;
     fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()>;
 }
 

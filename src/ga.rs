@@ -26,7 +26,7 @@ impl<'a, P: Problem> GA<'a, P> {
     }
 }
 
-impl<'a, P: Problem> EA<'a> for GA<'a, P> {
+impl<'a, P: Problem> EA<'a, P> for GA<'a, P> {
     type IndType = RealCodedIndividual;
 
     fn breed(&self, ctx: &mut EAContext<Self::IndType>, sel_inds: &Vec<usize>, children: &mut Vec<Self::IndType>) {

@@ -133,7 +133,7 @@ impl<'a, P: Problem> NE<'a, P> {
     }
 }
 
-impl<'a, P: Problem> EA<'a> for NE<'a, P> {
+impl<'a, P: Problem> EA<'a, P> for NE<'a, P> {
     type IndType = NEIndividual;
 
     fn breed(&self, ctx: &mut EAContext<Self::IndType>, sel_inds: &Vec<usize>, children: &mut Vec<Self::IndType>) {
