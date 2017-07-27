@@ -22,7 +22,9 @@ pub trait NeuralNetwork : Clone {
     /// * `xs` - input vector.
     /// * `bypass` - bypass vector, which is introduced at the input of every layer.
     fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
-        self.compute(xs)
+        let mut out = self.compute(xs);
+        out.extend(bypass.iter());
+        out
     }
     /// Returns number of input nodes.
     fn get_inputs_count(&self) -> usize;
@@ -41,8 +43,26 @@ pub struct MultilayeredNetwork {
     outputs_num: usize,
     /// Vector of layers.
     layers: Vec<Box<NeuralLayer>>,
+    /// Type of the neural architecture.
+    arch: NeuralArchitecture,
     /// Flag to denote whether the network is built and initialized.
     is_built: bool,
+}
+
+
+/// Enumeration for the different types of neural architectures.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub enum NeuralArchitecture {
+    /// Standard multilayered feed-forward network without skip connections,
+    Multilayered,
+    /// Multilayered NN where every layer is connected to the input layer.
+    BypassInputs,
+    /// Multilayered NN where inputs of current layere are propagated forward to the next layer.
+    /// So that every layere is connected to the inputs of the previous layer.
+    BypassLayer,
+    /// Multilayered NN where every layere is connected to the outputs of all previous layers, including the input.
+    BypassFull
 }
 
 #[allow(dead_code)]
@@ -60,6 +80,7 @@ impl MultilayeredNetwork {
             inputs_num: inputs_num,
             outputs_num: outputs_num,
             layers: Vec::new(),
+            arch: NeuralArchitecture::Multilayered,
             is_built: false,
         }
     }
@@ -74,14 +95,14 @@ impl MultilayeredNetwork {
     ///              and hidden layers (`layers[1:layers.len()-1]`).
     /// * `acts` - array of activations for hidden layers. Note that `k`-th hidden layers will
     ///            have `k`-th activation!
-    pub fn from_layers<R: Rng+Sized>(layers: &[u32], acts: &[ActivationFunctionType], rng: &mut R) -> MultilayeredNetwork {
+    pub fn from_layers<R: Rng+Sized>(layers: &[u32], acts: &[ActivationFunctionType], arch: NeuralArchitecture, rng: &mut R) -> MultilayeredNetwork {
         assert!(layers.len() >= 2);
 
         let mut res = MultilayeredNetwork::new(layers[0] as usize, layers[layers.len()-1] as usize);
         for k in 1..(layers.len()-1) {
             res.add_hidden_layer(layers[k] as usize, acts[k]);
         }
-        res.build(rng);
+        res.build(rng, arch);
         res
     }
 
@@ -98,10 +119,25 @@ impl MultilayeredNetwork {
     /// * `size` - number of nodes in a layer.
     /// * `actf` - type of activation function.
     pub fn add_hidden_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
+        self.add_layer(size, actf, false)
+    }
+
+    /// Add a hidden layer with bypass (skip) connections, so that its output also contains input signals.
+    ///
+    /// Panics if the network has already been initialized .
+    ///
+    /// # Arguments:
+    /// * `size` - number of nodes in a layer.
+    /// * `actf` - type of activation function.
+    pub fn add_hidden_bypass_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
+        self.add_layer(size, actf, true)
+    }
+
+    fn add_layer(&mut self, size: usize, actf: ActivationFunctionType, is_bypass: bool) -> &mut Self {
         if self.is_built {
             panic!("Can not add layer to already built network.");
         }
-        self.layers.push(Box::new(NeuralLayer::new(size, actf)));
+        self.layers.push(Box::new(NeuralLayer::new(size, actf, is_bypass)));
         self
     }
 
@@ -109,19 +145,28 @@ impl MultilayeredNetwork {
     ///
     /// # Arguments:
     /// * `rng` - mutable reference to the external RNG.
-    pub fn build<R: Rng+Sized>(&mut self, rng: &mut R) {
+    pub fn build<R: Rng+Sized>(&mut self, rng: &mut R, arch: NeuralArchitecture) {
         if self.is_built {
             panic!("The network has already been built.");
         }
 
+        self.arch = arch;
+
         // add output layer.
-        self.layers.push(Box::new(NeuralLayer::new(self.outputs_num, ActivationFunctionType::Linear)));
+        self.layers.push(Box::new(NeuralLayer::new(self.outputs_num, ActivationFunctionType::Linear, false)));
 
         // init weights and biases for all layers.
         let mut inputs = self.inputs_num;
+        let mut prev_outputs = 0usize;
         for l in self.layers.iter_mut() {
             l.init_weights(inputs, rng);
-            inputs = l.len();
+            match self.arch {
+                NeuralArchitecture::Multilayered => {inputs = l.len();}
+                NeuralArchitecture::BypassInputs => {inputs = l.len() + self.inputs_num;}
+                NeuralArchitecture::BypassLayer => {inputs = l.len() + prev_outputs;}
+                NeuralArchitecture::BypassFull => {inputs = l.len() + inputs;}
+            }
+            prev_outputs = l.len();
         }
         self.is_built = true;
     }
@@ -150,7 +195,7 @@ impl MultilayeredNetwork {
     ///     let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
     ///     net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
     ///        .add_hidden_layer(20 as usize, ActivationFunctionType::Sigmoid)
-    ///        .build(&mut rng);       // `build` finishes creation of neural network.
+    ///        .build(&mut rng, NeuralArchitecture::Multilayered);       // `build` finishes creation of neural network.
     ///
     ///     let (ws, bs) = net.get_weights();   // `ws` and `bs` are `Vec` arrays containing weights and biases for each layer.
     ///     assert!(ws.len() == 3);     // number of elements equals to number of hidden layers + 1 output layer
@@ -222,7 +267,7 @@ impl Clone for MultilayeredNetwork {
         for k in 0..self.layers.len()-1 {
             res.add_hidden_layer(self.layers[k].size, self.layers[k].activation);
         }
-        res.build(&mut rand::thread_rng());
+        res.build(&mut rand::thread_rng(), self.arch);
         let (wss, bss) = self.get_weights(); 
         res.set_weights(&wss, &bss);
         res
@@ -237,6 +282,8 @@ impl Clone for MultilayeredNetwork {
 pub struct NeuralLayer {
     /// Number of nodes.
     size: usize,
+    /// Number of inputs.
+    inputs_num: usize,
     /// Matrix of weights. `weights[k]` is a vector of weights for the `k`-th node.
     weights: Vec<Vec<f32>>,
     /// Vector of biases. `biases[k]` is a biases for the `k`-th node.
@@ -245,6 +292,8 @@ pub struct NeuralLayer {
     outputs: Vec<f32>,
     /// Type of activation function for every node in the layer.
     activation: ActivationFunctionType,
+    /// Indicates whether the layer implements skip connections to propagate input signals to output.
+    is_bypass: bool,
 }
 
 #[allow(dead_code)]
@@ -254,13 +303,15 @@ impl NeuralLayer {
     /// # Arguments:
     /// * `size` - number of nodes.
     /// * `actf` - type of activation function.
-    pub fn new(size: usize, actf: ActivationFunctionType) -> NeuralLayer {
+    pub fn new(size: usize, actf: ActivationFunctionType, is_bypass: bool) -> NeuralLayer {
         NeuralLayer{
             size: size,
+            inputs_num: 0usize,
             weights: Vec::new(),
             biases: Vec::new(),
             outputs: Vec::new(),
-            activation: actf
+            activation: actf,
+            is_bypass: is_bypass,
         }
     }
 
@@ -270,6 +321,7 @@ impl NeuralLayer {
     /// * `inputs_num` - number of inputs for the layer.
     /// * `rng` - mutable reference to the external RNG.
     pub fn init_weights<R: Rng + Sized>(&mut self, inputs_num: usize, rng: &mut R) {
+        self.inputs_num = inputs_num;
         for _ in 0..self.size {
             self.weights.push(rand_vector_std_gauss(inputs_num, rng));
         }
@@ -286,6 +338,11 @@ impl NeuralLayer {
                             .map(|(&w, &b)| w+b)
                             .collect::<Vec<f32>>();
         compute_activations_inplace(&mut self.outputs, self.activation);
+    }
+
+    /// Returns number of inputs.
+    pub fn get_inputs_num(&self) -> usize {
+        self.inputs_num
     }
 
     /// Return number of nodes in the layer.
@@ -423,7 +480,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let mut net_linear: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
         net_linear.add_hidden_layer(30 as usize, ActivationFunctionType::Linear)
-                  .build(&mut rng);
+                  .build(&mut rng, NeuralArchitecture::Multilayered);
 
         // outputs are not zeroes due to random biases.
         let net_out = net_linear.compute(&[0f32; INPUT_SIZE]);
@@ -456,14 +513,14 @@ mod test {
         net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
             .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
             .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
 
         // net2 has the same structure and weights as net1.
         let mut net2: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
         net2.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
             .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
             .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
         let (ws, bs) = net.get_weights();
         println!("{:?}", net.get_weights());
         assert!(ws.len() == 4);
@@ -477,4 +534,36 @@ mod test {
             assert!(out1.iter().zip(out2.iter()).all(|(x1, x2)| x1 == x2));
         }
     }
+
+    // // #[test]
+    // fn test_bypass_net() {
+    //     const INPUT_SIZE: usize = 20;
+    //     const OUTPUT_SIZE: usize = 2;
+
+    //     let mut rng = rand::thread_rng();
+    //     let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
+    //     net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
+    //         .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
+    //         .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
+    //         .build(&mut rng);
+
+    //     // net2 has the same structure and weights as net1.
+    //     let mut net2: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
+    //     net2.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
+    //         .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
+    //         .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
+    //         .build(&mut rng);
+    //     let (ws, bs) = net.get_weights();
+    //     println!("{:?}", net.get_weights());
+    //     assert!(ws.len() == 4);
+    //     net2.set_weights(&ws, &bs);
+
+    //     // net and net2 should produce identical outputs
+    //     for _ in 0..100 {
+    //         let x = rand_vector_std_gauss(INPUT_SIZE, &mut rng);
+    //         let out1 = net.compute(&x);
+    //         let out2 = net2.compute(&x);
+    //         assert!(out1.iter().zip(out2.iter()).all(|(x1, x2)| x1 == x2));
+    //     }
+    // }
 }

@@ -14,7 +14,7 @@ fn main() {
     let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
     net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
          .add_hidden_layer(20 as usize, ActivationFunctionType::Sigmoid)
-         .build(&mut rng);       // `build` finishes creation of neural network.
+         .build(&mut rng, NeuralArchitecture::Multilayered);       // `build` finishes creation of neural network.
 
     let (ws, bs) = net.get_weights();   // `ws` and `bs` are `Vec` arrays containing weights and biases for each layer.
     assert!(ws.len() == 3);     // number of elements equals to number of hidden layers + 1 output layer

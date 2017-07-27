@@ -181,7 +181,7 @@ mod test {
         let mut net = MultilayeredNetwork::new(2, 2);
         net.add_hidden_layer(10 as usize, ActivationFunctionType::Sigmoid)
             .add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
         let (ws1, bs1) = net.get_weights();
 
         let mut ind = NEIndividual::new();

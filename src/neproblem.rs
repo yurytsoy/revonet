@@ -2,7 +2,7 @@ use rand;
 use rand::{Rng, StdRng, SeedableRng};
 
 use ea::*;
-use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralNetwork};
+use neuro::{ActivationFunctionType, MultilayeredNetwork, NeuralArchitecture, NeuralNetwork};
 use problem::*;
 
 
@@ -68,7 +68,7 @@ impl NeuroProblem for XorProblem {
         let mut rng = rand::thread_rng();
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
         net.add_hidden_layer(2 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
         net
     }
 
@@ -165,7 +165,7 @@ impl NeuroProblem for SymbolicRegressionProblem {
         let mut rng = rand::thread_rng();
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
         net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
         net
     }
 

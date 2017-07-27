@@ -48,7 +48,7 @@ let mut rng = rand::thread_rng();   // needed for weights initialization when NN
 let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
 net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
      .add_hidden_layer(20 as usize, ActivationFunctionType::Sigmoid)
-     .build(&mut rng);       // `build` finishes creation of neural network.
+     .build(&mut rng, NeuralArchitecture::Multilayered);       // `build` finishes creation of neural network.
 
 let (ws, bs) = net.get_weights();   // `ws` and `bs` are `Vec` arrays containing weights and biases for each layer.
 assert!(ws.len() == 3);		// number of elements equals to number of hidden layers + 1 output layer
@@ -95,7 +95,7 @@ impl NeuroProblem for RandomNEProblem {
         let mut rng = rand::thread_rng();
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
         net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng);
+            .build(&mut rng, NeuralArchitecture::Multilayered);
         net
     }
 
