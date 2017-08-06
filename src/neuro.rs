@@ -15,17 +15,6 @@ pub trait NeuralNetwork : Clone {
     /// # Arguments:
     /// * `xs` - input vector
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
-    /// TODO: Compute output of neural network and extend output of every unit (mostly layer) with a given `bypass` vector.
-    /// This function can be used implement bypass connections to the input layer.
-    ///
-    /// # Arguments:
-    /// * `xs` - input vector.
-    /// * `bypass` - bypass vector, which is introduced at the input of every layer.
-    fn compute_with_bypass(&mut self, xs: &[f32], bypass: &[f32]) -> Vec<f32> {
-        let mut out = self.compute(xs);
-        out.extend(bypass.iter());
-        out
-    }
     /// Returns number of input nodes.
     fn get_inputs_count(&self) -> usize;
     /// Returns number of output nodes.
@@ -157,7 +146,7 @@ impl MultilayeredNetwork {
 
         // init weights and biases for all layers.
         let mut inputs = self.inputs_num;
-        let mut prev_outputs = 0usize;
+        let mut prev_outputs = self.inputs_num;
         for l in self.layers.iter_mut() {
             l.init_weights(inputs, rng);
             match self.arch {
@@ -179,7 +168,7 @@ impl MultilayeredNetwork {
     /// * `result.1` - matrix of biases.  `k`-th row corresponds to the vector of biases
     ///                 for `k`-th layer.
     ///
-    /// # Example:
+    /// # Example: Multilayered network with sigmoid activations:
     /// ```
     /// extern crate rand;
     /// use rand::{Rng};
@@ -251,11 +240,43 @@ impl NeuralNetwork for MultilayeredNetwork {
         self.outputs_num
     }
     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
-        // let mut input = Vec::from(xs);
         let mut input = xs;
+        let mut prev_outputs: Vec<f32> = Vec::new();
+        let mut layer_idx = 0;
         for l in self.layers.iter_mut() {
-            l.compute(input);
+            match self.arch {
+                NeuralArchitecture::Multilayered => {
+                    // println!("layer input size: {}", input.len());
+                    l.compute(input);
+                }
+                NeuralArchitecture::BypassInputs => {
+                    if layer_idx > 0 {
+                        let mut cur_input = Vec::from(input);
+                        cur_input.extend(xs);
+                        // println!("layer input size: {}", cur_input.len());
+                        l.compute(&cur_input);
+                    } else {
+                        // println!("layer input size: {}", input.len());
+                        l.compute(input);
+                    }
+                }
+                NeuralArchitecture::BypassLayer => {
+                    let mut cur_input = Vec::from(input);
+                    cur_input.extend(prev_outputs.iter());
+                    // println!("layer input size: {}", cur_input.len());
+                    l.compute(&cur_input);
+                    prev_outputs = Vec::from(input);
+                }
+                NeuralArchitecture::BypassFull => {
+                    let mut cur_input: Vec<f32> = Vec::from(input);
+                    cur_input.extend(prev_outputs.iter());
+                    // println!("layer input size: {}", cur_input.len());
+                    l.compute(&cur_input);
+                    prev_outputs.extend(input);
+                }
+            }
             input = l.get_outputs();
+            layer_idx += 1;
         }
         Vec::from(input)
     }
@@ -477,7 +498,7 @@ mod test {
         const INPUT_SIZE: usize = 20;
         const OUTPUT_SIZE: usize = 2;
 
-        let mut rng = rand::thread_rng();
+        let mut rng: StdRng = StdRng::from_seed(&[0 as usize]);
         let mut net_linear: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
         net_linear.add_hidden_layer(30 as usize, ActivationFunctionType::Linear)
                   .build(&mut rng, NeuralArchitecture::Multilayered);
@@ -508,7 +529,7 @@ mod test {
         const INPUT_SIZE: usize = 20;
         const OUTPUT_SIZE: usize = 2;
 
-        let mut rng = rand::thread_rng();
+        let mut rng: StdRng = StdRng::from_seed(&[0 as usize]);
         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
         net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
             .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
@@ -535,35 +556,60 @@ mod test {
         }
     }
 
-    // // #[test]
-    // fn test_bypass_net() {
-    //     const INPUT_SIZE: usize = 20;
-    //     const OUTPUT_SIZE: usize = 2;
+    #[test]
+    fn test_bypass_net() {
+        const INPUT_SIZE: usize = 2;
+        const OUTPUT_SIZE: usize = 2;
+        let all_layer_sizes = [INPUT_SIZE, 3_usize, 5_usize, 3_usize, OUTPUT_SIZE];
 
-    //     let mut rng = rand::thread_rng();
-    //     let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-    //     net.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
-    //         .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
-    //         .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
-    //         .build(&mut rng);
+        for arch in vec![NeuralArchitecture::Multilayered, NeuralArchitecture::BypassInputs, NeuralArchitecture::BypassLayer, NeuralArchitecture::BypassFull] {
+            let mut rng: StdRng = StdRng::from_seed(&[0 as usize]);
+            let mut net: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
+            net.add_hidden_layer(all_layer_sizes[1], ActivationFunctionType::Sigmoid)
+                .add_hidden_layer(all_layer_sizes[2], ActivationFunctionType::Linear)
+                .add_hidden_layer(all_layer_sizes[3], ActivationFunctionType::Sigmoid)
+                .build(&mut rng, arch);
 
-    //     // net2 has the same structure and weights as net1.
-    //     let mut net2: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
-    //     net2.add_hidden_layer(30 as usize, ActivationFunctionType::Sigmoid)
-    //         .add_hidden_layer(15 as usize, ActivationFunctionType::Linear)
-    //         .add_hidden_layer(300 as usize, ActivationFunctionType::Sigmoid)
-    //         .build(&mut rng);
-    //     let (ws, bs) = net.get_weights();
-    //     println!("{:?}", net.get_weights());
-    //     assert!(ws.len() == 4);
-    //     net2.set_weights(&ws, &bs);
+            // net2 has the same structure and weights as net1.
+            let mut net2: MultilayeredNetwork = MultilayeredNetwork::new(INPUT_SIZE, OUTPUT_SIZE);
+            net2.add_hidden_layer(all_layer_sizes[1], ActivationFunctionType::Sigmoid)
+                .add_hidden_layer(all_layer_sizes[2], ActivationFunctionType::Linear)
+                .add_hidden_layer(all_layer_sizes[3], ActivationFunctionType::Sigmoid)
+                .build(&mut rng, arch);
+            let (ws, bs) = net.get_weights();
+            println!("Current architecture: {:?}", arch);
+            for layer_idx in 0..ws.len() {
+                if layer_idx == 0 {
+                    assert!(ws[0].len() == all_layer_sizes[1] * INPUT_SIZE);
+                    continue;
+                }
 
-    //     // net and net2 should produce identical outputs
-    //     for _ in 0..100 {
-    //         let x = rand_vector_std_gauss(INPUT_SIZE, &mut rng);
-    //         let out1 = net.compute(&x);
-    //         let out2 = net2.compute(&x);
-    //         assert!(out1.iter().zip(out2.iter()).all(|(x1, x2)| x1 == x2));
-    //     }
-    // }
+                match arch {
+                    NeuralArchitecture::Multilayered => {
+                        assert!(ws[layer_idx].len() == all_layer_sizes[layer_idx+1] * all_layer_sizes[layer_idx]);
+                    },
+                    NeuralArchitecture::BypassInputs => {
+                        assert!(ws[layer_idx].len() == all_layer_sizes[layer_idx+1] * (all_layer_sizes[layer_idx] + INPUT_SIZE));
+                    },
+                    NeuralArchitecture::BypassLayer => {
+                        assert!(ws[layer_idx].len() == all_layer_sizes[layer_idx+1] * (all_layer_sizes[layer_idx] + all_layer_sizes[layer_idx-1]));
+                    },
+                    NeuralArchitecture::BypassFull => {
+                        assert!(ws[layer_idx].len() == all_layer_sizes[layer_idx+1] * (0..(layer_idx+1)).fold(0_usize, |s, k| s + all_layer_sizes[k]));
+                    },
+                }
+                // println!("  [{:?}]", w.len());
+            }
+            assert!(ws.len() == 4);
+            net2.set_weights(&ws, &bs);
+
+            // net and net2 should produce identical outputs
+            for _ in 0..100 {
+                let x = rand_vector_std_gauss(INPUT_SIZE, &mut rng);
+                let out1 = net.compute(&x);
+                let out2 = net2.compute(&x);
+                assert!(out1.iter().zip(out2.iter()).all(|(x1, x2)| x1 == x2));
+            }
+        }
+    }
 }
