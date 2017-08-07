@@ -11,9 +11,9 @@ use problem::*;
 /// Trait for problem where NN is a solution.
 pub trait NeuroProblem: Problem {
     /// Number of input variables.
-    fn get_inputs_count(&self) -> usize;
+    fn get_inputs_num(&self) -> usize;
     /// Number of output (target) variables.
-    fn get_outputs_count(&self) -> usize;
+    fn get_outputs_num(&self) -> usize;
     /// Returns random network with default number of inputs and outputs and some predefined structure.
     ///
     /// For now all networks returned by implementation of this functions have the same structure and
@@ -55,20 +55,21 @@ pub struct XorProblem {}
 
 #[allow(dead_code)]
 impl XorProblem {
-    fn new() -> XorProblem {
+    pub fn new() -> XorProblem {
         XorProblem{}
     }
 }
 
 #[allow(dead_code)]
 impl NeuroProblem for XorProblem {
-    fn get_inputs_count(&self) -> usize {2}
-    fn get_outputs_count(&self) -> usize {1}
+    fn get_inputs_num(&self) -> usize {2}
+    fn get_outputs_num(&self) -> usize {1}
     fn get_default_net(&self) -> MultilayeredNetwork {
         let mut rng = rand::thread_rng();
-        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
-        net.add_hidden_layer(2 as usize, ActivationFunctionType::Sigmoid)
-            .build(&mut rng, NeuralArchitecture::Multilayered);
+        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_num(), self.get_outputs_num());
+        net.add_hidden_layer(4 as usize, ActivationFunctionType::Sigmoid)
+            .build(&mut rng, NeuralArchitecture::BypassInputs);
+            // .build(&mut rng, NeuralArchitecture::BypassInputs);
         net
     }
 
@@ -155,15 +156,11 @@ impl SymbolicRegressionProblem {
 }
 
 impl NeuroProblem for SymbolicRegressionProblem {
-    fn get_inputs_count(&self) -> usize {
-        1
-    }
-    fn get_outputs_count(&self) -> usize {
-        1
-    }
+    fn get_inputs_num(&self) -> usize { 1 }
+    fn get_outputs_num(&self) -> usize { 1 }
     fn get_default_net(&self) -> MultilayeredNetwork {
         let mut rng = rand::thread_rng();
-        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
+        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_num(), self.get_outputs_num());
         net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
             .build(&mut rng, NeuralArchitecture::Multilayered);
         net
@@ -223,13 +220,13 @@ mod test {
             println!("Created problem of type: {}", prob_type);
 
             let mut net = prob.get_default_net();
-            println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_count(), net.get_outputs_count(), net.len()-1);
+            println!("Created default net with {} inputs, {} outputs, and {} hidden layers ", net.get_inputs_num(), net.get_outputs_num(), net.len()-1);
             println!("  Network weights: {:?}", net.get_weights());
             let mut ind: NEIndividual = prob.get_random_individual(0, &mut rng);
             println!("  Random individual: {:?}", ind.to_vec().unwrap());
             println!("  Random individual ANN: {:?}", ind.to_net().unwrap());
 
-            let input_size = net.get_inputs_count();
+            let input_size = net.get_inputs_num();
             let mut ys = Vec::with_capacity(100);
             for _ in 0..100 {
                 let x = rand_vector_std_gauss(input_size, &mut rng);

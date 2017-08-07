@@ -16,9 +16,9 @@ pub trait NeuralNetwork : Clone {
     /// * `xs` - input vector
     fn compute(&mut self, xs: &[f32]) -> Vec<f32>;
     /// Returns number of input nodes.
-    fn get_inputs_count(&self) -> usize;
+    fn get_inputs_num(&self) -> usize;
     /// Returns number of output nodes.
-    fn get_outputs_count(&self) -> usize;
+    fn get_outputs_num(&self) -> usize;
 }
 
 /// Representation of multilayered neural network with linear activation on output and arbitrary
@@ -233,13 +233,14 @@ impl MultilayeredNetwork {
 }
 
 impl NeuralNetwork for MultilayeredNetwork {
-    fn get_inputs_count(&self) -> usize {
+    fn get_inputs_num(&self) -> usize {
         self.inputs_num
     }
-    fn get_outputs_count(&self) -> usize {
+    fn get_outputs_num(&self) -> usize {
         self.outputs_num
     }
     fn compute(&mut self, xs: &[f32]) -> Vec<f32> {
+        // println!("compute");
         let mut input = xs;
         let mut prev_outputs: Vec<f32> = Vec::new();
         let mut layer_idx = 0;

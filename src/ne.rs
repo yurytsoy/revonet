@@ -24,18 +24,20 @@ pub struct NEIndividual {
 impl<'a> NEIndividual {
     /// Update individual's network by assigning gene values to network's weights.
     fn update_net(&mut self) {
+        // println!("update net");
         match &mut self.network {
             &mut Some(ref mut net) => {
                 // copy weights from genes to NN.
                 let (mut ws, mut bs) = (Vec::new(), Vec::new());
-                let mut inputs_num = net.get_inputs_count();
+                // println!("{:?}", self.genes);
                 let mut cur_idx = 0;
                 // weights.
                 for layer in net.iter_layers() {
                     // println!("getting slice for weights {}..{}", cur_idx, (cur_idx + inputs_num * layer.len()));
+                    let inputs_num = layer.get_inputs_num();
                     ws.push(Vec::from(&self.genes[cur_idx..(cur_idx + inputs_num * layer.len())]));
                     cur_idx += inputs_num * layer.len();
-                    inputs_num = layer.len();
+                    // inputs_num = layer.len();
                 }
                 // biases.
                 for layer in net.iter_layers() {
@@ -43,6 +45,7 @@ impl<'a> NEIndividual {
                     bs.push(Vec::from(&self.genes[cur_idx..(cur_idx + layer.len())]));
                     cur_idx += layer.len();
                 }
+                // println!("set weights");
                 net.set_weights(&ws, &bs);
             },
             &mut None => {
@@ -142,6 +145,7 @@ impl<'a, P: Problem> EA<'a, P> for NE<'a, P> {
     }
 
     fn run(&mut self, settings: EASettings) -> Result<&EAResult<Self::IndType>, ()> {
+        println!("run");
         let gen_count = settings.gen_count;
         let mut ctx = EAContext::new(settings, self.problem);
         self.run_with_context(&mut ctx, self.problem, gen_count);
