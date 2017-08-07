@@ -60,8 +60,8 @@ assert!(bs.len() == 3);		// number of elements equals to number of hidden layers
 
 ```rust
 // Dummy problem returning random fitness.
-pub struct SphereProblem;
-impl Problem for SphereProblem {
+pub struct DummyProblem;
+impl Problem for DummyProblem {
     // Function to evaluate a specific individual.
     fn compute<T: Individual>(&self, ind: &mut T) -> f32 {
         // use `to_vec` to get real-coded representation of an individual.
@@ -78,32 +78,28 @@ impl Problem for SphereProblem {
 ```rust
 // Dummy problem returning random fitness.
 struct RandomNEProblem {}
-
 impl RandomNEProblem {
     fn new() -> RandomNEProblem {
         RandomNEProblem{}
     }
 }
-
 impl NeuroProblem for RandomNEProblem {
     // return number of NN inputs.
-    fn get_inputs_count(&self) -> usize {1}
+    fn get_inputs_num(&self) -> usize {1}
     // return number of NN outputs.
-    fn get_outputs_count(&self) -> usize {1}
-    // return NN with random weights and a fixed structure. For now the structure should be the same all the time to make sure that crossover is possible. Likely to change in the future as I get more hang of Rust.
+    fn get_outputs_num(&self) -> usize {1}
+    // return NN with random weights and a fixed structure. For now the structure should be the same all the time to make sure that crossover is possible. Likely to change in the future.
     fn get_default_net(&self) -> MultilayeredNetwork {
         let mut rng = rand::thread_rng();
-        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_count(), self.get_outputs_count());
+        let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_num(), self.get_outputs_num());
         net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
             .build(&mut rng, NeuralArchitecture::Multilayered);
         net
     }
-
     // Function to evaluate performance of a given NN.
     fn compute_with_net<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
         let mut rng: StdRng = StdRng::from_seed(&[0]);
-
-        let mut input = (0..self.get_inputs_count())
+        let mut input = (0..self.get_inputs_num())
                             .map(|_| rng.gen::<f32>())
                             .collect::<Vec<f32>>();
         // compute NN output using random input.
@@ -111,5 +107,6 @@ impl NeuroProblem for RandomNEProblem {
         output[0]
     }
 }
+
 
 ```

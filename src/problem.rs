@@ -5,7 +5,37 @@ use ea::*;
 
 /// Represents baseline interface for the objective function.
 ///
-/// By default solution is a vector of real-numbers.
+/// By default solution is represented by a vector of real-numbers.
+///
+/// # Example: Custom optimization problem
+/// ```
+/// extern crate revonet;
+/// extern crate rand;
+///
+/// use rand::{Rng, SeedableRng, StdRng};
+///
+/// use revonet::ea::*;
+/// use revonet::problem::*;
+///
+/// // Dummy problem returning random fitness.
+/// pub struct DummyProblem;
+///
+/// impl Problem for DummyProblem {
+///     // Function to evaluate a specific individual.
+///     fn compute<T: Individual>(&self, ind: &mut T) -> f32 {
+///         // use `to_vec` to get real-coded representation of an individual.
+///         let v = ind.to_vec().unwrap();
+///
+///         // Perform calculations as per optimization problem being implemened.
+///         // Here just a random value is returned.
+///         let mut rng: StdRng = StdRng::from_seed(&[0]);
+///         rng.gen::<f32>()
+///     }
+/// }
+///
+/// fn main() {}
+/// ```
+
 pub trait Problem{
     /// Returns whether given fitness value is enough to be a solution.
     ///

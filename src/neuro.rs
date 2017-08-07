@@ -108,25 +108,10 @@ impl MultilayeredNetwork {
     /// * `size` - number of nodes in a layer.
     /// * `actf` - type of activation function.
     pub fn add_hidden_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
-        self.add_layer(size, actf, false)
-    }
-
-    /// Add a hidden layer with bypass (skip) connections, so that its output also contains input signals.
-    ///
-    /// Panics if the network has already been initialized .
-    ///
-    /// # Arguments:
-    /// * `size` - number of nodes in a layer.
-    /// * `actf` - type of activation function.
-    pub fn add_hidden_bypass_layer(&mut self, size: usize, actf: ActivationFunctionType) -> &mut Self {
-        self.add_layer(size, actf, true)
-    }
-
-    fn add_layer(&mut self, size: usize, actf: ActivationFunctionType, is_bypass: bool) -> &mut Self {
         if self.is_built {
             panic!("Can not add layer to already built network.");
         }
-        self.layers.push(Box::new(NeuralLayer::new(size, actf, is_bypass)));
+        self.layers.push(Box::new(NeuralLayer::new(size, actf)));
         self
     }
 
@@ -142,7 +127,7 @@ impl MultilayeredNetwork {
         self.arch = arch;
 
         // add output layer.
-        self.layers.push(Box::new(NeuralLayer::new(self.outputs_num, ActivationFunctionType::Linear, false)));
+        self.layers.push(Box::new(NeuralLayer::new(self.outputs_num, ActivationFunctionType::Linear)));
 
         // init weights and biases for all layers.
         let mut inputs = self.inputs_num;
@@ -314,8 +299,6 @@ pub struct NeuralLayer {
     outputs: Vec<f32>,
     /// Type of activation function for every node in the layer.
     activation: ActivationFunctionType,
-    /// Indicates whether the layer implements skip connections to propagate input signals to output.
-    is_bypass: bool,
 }
 
 #[allow(dead_code)]
@@ -325,7 +308,7 @@ impl NeuralLayer {
     /// # Arguments:
     /// * `size` - number of nodes.
     /// * `actf` - type of activation function.
-    pub fn new(size: usize, actf: ActivationFunctionType, is_bypass: bool) -> NeuralLayer {
+    pub fn new(size: usize, actf: ActivationFunctionType) -> NeuralLayer {
         NeuralLayer{
             size: size,
             inputs_num: 0usize,
@@ -333,7 +316,6 @@ impl NeuralLayer {
             biases: Vec::new(),
             outputs: Vec::new(),
             activation: actf,
-            is_bypass: is_bypass,
         }
     }
 
@@ -411,9 +393,23 @@ pub enum ActivationFunctionType {
     Relu,
 }
 
+/// Trait to generalize behaviour of activation function.
 pub trait ActivationFunction: Debug {
+    /// Compute activation function value using given argument.
+    /// Implementation should call `ActivationFunction::compute_static` to avoid duplication.
+    ///
+    /// # Arguments:
+    /// * `x` - value of argument of activation function.
     fn compute(&self, x: f32) -> f32;
+
+    /// Compute activation function value using given argument.
+    /// This is a static variant of the function `compute`.
+    ///
+    /// # Arguments:
+    /// * `x` - value of argument of activation function.
     fn compute_static(x: f32) -> f32;
+
+    /// Construct an activation function instance.
     fn new() -> Self;
 }
 
@@ -450,6 +446,12 @@ impl ActivationFunction for ReluActivation {
     }
 }
 
+/// Computes activation function outputs by using array of arguments.
+/// The result is written into the input array.
+///
+/// # Arguments:
+/// * `xs` - array of arguments for vector of activation functions.
+/// * `actf` - element of the `ActivationFunctionType` denoting type of activation.
 pub fn compute_activations_inplace(xs: &mut [f32], actf: ActivationFunctionType) {
     let actf_ptr: fn(f32) -> f32;
     match actf {

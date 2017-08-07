@@ -9,6 +9,57 @@ use problem::*;
 //--------------------------------------------
 
 /// Trait for problem where NN is a solution.
+///
+/// # Example: Custom NE problem
+/// ```
+/// extern crate revonet;
+/// extern crate rand;
+///
+/// use rand::{Rng, SeedableRng, StdRng};
+///
+/// use revonet::ea::*;
+/// use revonet::ne::*;
+/// use revonet::neuro::*;
+/// use revonet::neproblem::*;
+///
+/// // Dummy problem returning random fitness.
+/// struct RandomNEProblem {}
+///
+/// impl RandomNEProblem {
+///     fn new() -> RandomNEProblem {
+///         RandomNEProblem{}
+///     }
+/// }
+///
+/// impl NeuroProblem for RandomNEProblem {
+///     // return number of NN inputs.
+///     fn get_inputs_num(&self) -> usize {1}
+///     // return number of NN outputs.
+///     fn get_outputs_num(&self) -> usize {1}
+///     // return NN with random weights and a fixed structure. For now the structure should be the same all the time to make sure that crossover is possible. Likely to change in the future.
+///     fn get_default_net(&self) -> MultilayeredNetwork {
+///         let mut rng = rand::thread_rng();
+///         let mut net: MultilayeredNetwork = MultilayeredNetwork::new(self.get_inputs_num(), self.get_outputs_num());
+///         net.add_hidden_layer(5 as usize, ActivationFunctionType::Sigmoid)
+///             .build(&mut rng, NeuralArchitecture::Multilayered);
+///         net
+///     }
+///
+///     // Function to evaluate performance of a given NN.
+///     fn compute_with_net<T: NeuralNetwork>(&self, nn: &mut T) -> f32 {
+///         let mut rng: StdRng = StdRng::from_seed(&[0]);
+///
+///         let mut input = (0..self.get_inputs_num())
+///                             .map(|_| rng.gen::<f32>())
+///                             .collect::<Vec<f32>>();
+///         // compute NN output using random input.
+///         let mut output = nn.compute(&input);
+///         output[0]
+///     }
+/// }
+///
+/// fn main() {}
+/// ```
 pub trait NeuroProblem: Problem {
     /// Number of input variables.
     fn get_inputs_num(&self) -> usize;
