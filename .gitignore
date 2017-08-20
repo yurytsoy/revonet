@@ -2,9 +2,12 @@
 # will have compiled files and executables
 /target/
 /.idea/
+/.vscode/
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here http://doc.crates.io/guide.html#cargotoml-vs-cargolock
 Cargo.lock
 test_json.json
 test_json_earesult.json
+test_json_earesult_mult.json
+*.odg
