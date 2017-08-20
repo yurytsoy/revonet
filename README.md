@@ -6,12 +6,13 @@ Features:
 
 * real-coded Evolutionary Algorithm
 * NeuroEvolutionary tuning of weights of Neural Network with fixed structure
-* supports several feed-forward architectures:
+* supports several feed-forward architectures
 
-![Supported NN architectures](https://github.com/yurytsoy/revonet/blob/master/imgs/nn_arch.png)
+![https://github.com/yurytsoy/revonet/blob/master/imgs/nn_arch.png](https://github.com/yurytsoy/revonet/blob/master/imgs/nn_arch.png)
 <!-- 
 ![Supported NN architectures](file:/home/yury/code/revonet/imgs/nn_arch.png)
  -->
+
 * automatically computes statistics for single and multiple runs for EA and NE
 * EA settings and results can be saved to json
 * allows defining user-specified objective functions for EA and NE (see examples below)
